@@ -1,0 +1,5 @@
+Welcome to Custodian AI Army!
+
+Select an agent from the list to begin your conversation. Each agent specializes in a unique area—Commander, Analyst, Creative, Technical, or Research. Type your message below and press Enter to start chatting.
+
+How can I assist you today?

@@ -95,13 +95,26 @@ class GeminiAgent(BaseAgent):
 			return error_message
 
 	def _format_code_blocks(self, text: str) -> str:
-		"""Ensure all code, JSON, or similar blocks are wrapped in triple backticks."""
+		"""Ensure all code, JSON, or similar blocks are wrapped in triple backticks and not truncated."""
 		import re
-		# If already contains code blocks, return as is
+		# If already contains code blocks, check for completeness
 		if '```' in text:
+			# Check for unclosed code block
+			code_blocks = [m for m in re.finditer(r'```[a-zA-Z]*\n[\s\S]*?```', text)]
+			if not code_blocks:
+				# Unclosed code block detected
+				return text + "\n\n⚠️ Warning: The code block above appears incomplete. Please regenerate or check for missing lines."
+			# Optionally, check for unterminated triple quotes in Python code
+			if '"""' in text:
+				triple_quotes = text.count('"""')
+				if triple_quotes % 2 != 0:
+					return text + "\n\n⚠️ Warning: The code block above contains an unterminated triple-quoted string."
 			return text
 		# Detect Python code (simple heuristic)
 		if re.search(r"def |class |import |print\(", text):
+			# Check for unterminated triple quotes
+			if text.count('"""') % 2 != 0:
+				return f"```python\n{text}\n```\n\n⚠️ Warning: The code block above contains an unterminated triple-quoted string."
 			return f"```python\n{text}\n```"
 		# Detect JSON
 		if text.strip().startswith('{') and text.strip().endswith('}'):

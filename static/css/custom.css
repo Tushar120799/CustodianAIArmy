@@ -1,0 +1,8 @@
+/* Custom Styles for Custodian AI Army */
+
+/* Adjust header stats spacing on medium screens and up */
+@media (min-width: 768px) {
+    .header-stats {
+        margin-right: 1.5rem; /* Add some space to the right */
+    }
+}

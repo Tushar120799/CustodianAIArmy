@@ -1,3 +1,8 @@
+// Export for tests
+if (typeof module !== 'undefined') {
+    module.exports = {
+    };
+}
 /**
  * Custodian AI Army - Frontend Application
  * Futuristic AI Agent Management Interface
@@ -23,24 +28,28 @@ class CustodianAIApp {
         this.currentAgent = null;
         this.agents = [];
         this.tasksCompleted = 0;
-        this.init();
+        this.urlParams = new URLSearchParams(window.location.search);
+        this.init(); // Make init async
     }
 
     async init() {
         this.setupEventListeners();
         await this.loadInitialData();
+
+        // URL-based routing
+        const section = this.urlParams.get('section') || 'dashboard';
+        await this.showSection(section);
+
+        // Handle direct-to-chat agent selection
+        const agentId = this.urlParams.get('agent_id');
+        if (section === 'chat' && agentId) {
+            const agentToSelect = this.agents.find(a => a.agent_id === agentId);
+            if (agentToSelect) this.selectChatAgent(agentToSelect);
+        }
         this.startPeriodicUpdates();
     }
 
     setupEventListeners() {
-        // Navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const section = e.currentTarget.dataset.section;
-                this.showSection(section);
-            });
-        });
-
         // Chat input
         const chatInput = document.getElementById('chat-input');
         if (chatInput) {
@@ -50,6 +59,16 @@ class CustodianAIApp {
                     this.sendMessage();
                 }
             });
+            // Auto-resize textarea
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = (chatInput.scrollHeight) + 'px';
+            });
+        }
+
+        const agentModal = document.getElementById('agentSelectModal');
+        if (agentModal) {
+            this.agentSelectModal = new bootstrap.Modal(agentModal);
         }
 
         // Task form
@@ -65,7 +84,6 @@ class CustodianAIApp {
     async loadInitialData() {
         try {
             await Promise.all([
-                this.loadArmyStatus(),
                 this.loadAgents(),
                 this.loadChatAgents()
             ]);
@@ -75,26 +93,17 @@ class CustodianAIApp {
         }
     }
 
-    async loadArmyStatus() {
-        try {
-            const response = await fetch('/api/v1/army/status');
-            const data = await response.json();
-            
-            this.updateDashboardStats(data);
-            this.updateAgentStatusGrid(data.agents);
-        } catch (error) {
-            console.error('Error loading army status:', error);
-        }
-    }
-
     async loadAgents() {
         try {
             const response = await fetch('/api/v1/agents');
             const data = await response.json();
             
             this.agents = data.agents;
-            this.updateAgentsGrid(data.agents);
+            this.updateAgentsGrid(data.agents); // This now populates the homepage
             this.updatePreferredAgentSelect(data.agents);
+
+            // Update the active agents count in the header
+            document.getElementById('active-agents').textContent = data.agents.length;
         } catch (error) {
             console.error('Error loading agents:', error);
         }
@@ -107,60 +116,12 @@ class CustodianAIApp {
             const data = await response.json();
             
             // Filter for main agents
-            const mainAgents = data.agents.filter(agent => agent.type === 'main');
+            const mainAgents = data.agents.filter(agent => agent.type.toLowerCase() === 'main');
             
             this.updateChatAgentList(mainAgents);
+            this.updateModalAgentList(mainAgents);
         } catch (error) {
             console.error('Error loading chat agents:', error);
-        }
-    }
-
-    updateDashboardStats(armyData) {
-        // Update header stats
-        document.getElementById('active-agents').textContent = 
-            armyData.status_distribution.idle || 0;
-        document.getElementById('tasks-completed').textContent = this.tasksCompleted;
-        
-        // Update overview stats
-        document.getElementById('total-agents').textContent = armyData.total_agents;
-        document.getElementById('main-agents').textContent = armyData.main_agents;
-        document.getElementById('sub-agents').textContent = armyData.sub_agents;
-    }
-
-    updateAgentStatusGrid(agents) {
-        const grid = document.getElementById('agent-status-grid');
-        const floatingGrid = document.getElementById('floating-agent-status-content');
-        
-        if (grid) {
-            grid.innerHTML = '';
-            agents.forEach(agent => {
-                const statusItem = document.createElement('div');
-                statusItem.className = 'agent-status-item';
-                
-                statusItem.innerHTML = `
-                    <div class="agent-name">${agent.name}</div>
-                    <div class="agent-specialization">${agent.specialization || 'General'}</div>
-                    <div class="agent-status status-${agent.status}">${agent.status.toUpperCase()}</div>
-                `;
-                
-                grid.appendChild(statusItem);
-            });
-        }
-        
-        if (floatingGrid) {
-            floatingGrid.innerHTML = '';
-            agents.forEach(agent => {
-                const statusItem = document.createElement('div');
-                statusItem.className = 'status-item';
-                
-                statusItem.innerHTML = `
-                    <div class="status-agent-name">${agent.name}</div>
-                    <div class="status-agent-specialization">${agent.specialization || 'General'}</div>
-                    <div class="status-agent-status status-${agent.status}">${agent.status.toUpperCase()}</div>
-                `;
-                
-                floatingGrid.appendChild(statusItem);
-            });
         }
     }
 
@@ -177,6 +138,9 @@ class CustodianAIApp {
             const capabilities = agent.capabilities.map(cap => 
                 `<span class="capability-tag">${cap.name}</span>`
             ).join('');
+
+            // Direct-to-chat button
+            const chatUrl = `/?section=chat&agent_id=${agent.agent_id}`;
             
             agentCard.innerHTML = `
                 <div class="agent-header">
@@ -190,6 +154,9 @@ class CustodianAIApp {
                 </div>
                 <div class="agent-capabilities">
                     ${capabilities}
+                </div>
+                <div class="agent-footer">
+                    <a href="${chatUrl}" class="btn btn-primary btn-sm chat-now-btn">Chat Now <i class="fas fa-comment-dots"></i></a>
                 </div>
             `;
             
@@ -218,6 +185,30 @@ class CustodianAIApp {
                 this.selectChatAgent(agent);
             });
             
+            list.appendChild(agentItem);
+        });
+    }
+
+    updateModalAgentList(agents) {
+        const list = document.getElementById('modal-agent-list');
+        if (!list) return;
+    
+        list.innerHTML = '';
+    
+        agents.forEach(agent => {
+            const agentItem = document.createElement('div');
+            agentItem.className = 'agent-list-item modal-agent-item'; // Use same styling
+            agentItem.innerHTML = `
+                <div class="agent-name">${agent.name}</div>
+                <div class="agent-specialization">${agent.specialization || 'General'}</div>
+            `;
+            agentItem.addEventListener('click', () => {
+                this.selectChatAgent(agent);
+                // Hide modal and focus input
+                if (this.agentSelectModal) {
+                    this.agentSelectModal.hide();
+                }
+            });
             list.appendChild(agentItem);
         });
     }
@@ -258,9 +249,11 @@ class CustodianAIApp {
         // Enable chat input
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-btn');
+        const changeAgentBtn = document.getElementById('change-agent-btn');
         
         chatInput.disabled = false;
         sendBtn.disabled = false;
+        changeAgentBtn.disabled = false;
         chatInput.placeholder = `Type your message to ${agent.name}...`;
         
         // Clear welcome message and show chat history
@@ -271,6 +264,7 @@ class CustodianAIApp {
                 <div class="message-content">Hello! I'm ${agent.name}, your ${agent.specialization || 'general'} AI assistant. How can I help you today?</div>
             </div>
         `;
+        chatInput.focus();
     }
 
     async sendMessage() {
@@ -284,6 +278,8 @@ class CustodianAIApp {
         
         if (!message) return;
 
+        // Reset textarea height
+        chatInput.style.height = 'auto';
         // Add user message to chat
         this.addMessageToChat('user', 'You', message);
         chatInput.value = '';
@@ -473,27 +469,40 @@ class CustodianAIApp {
         resultsContainer.appendChild(resultDiv);
     }
 
-    showSection(sectionName) {
+    async showSection(sectionName) {
         // Update navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
         });
         
-        document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
+        const navItem = document.querySelector(`[data-section="${sectionName}"]`);
+        if (navItem) {
+            navItem.classList.add('active');
+        }
         
         // Update content sections
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
         
-        document.getElementById(sectionName).classList.add('active');
+        const sectionElement = document.getElementById(sectionName);
+        if (sectionElement) {
+            sectionElement.classList.add('active');
+        }
         
         // Load section-specific data
         if (sectionName === 'agents') {
-            this.loadAgents();
+            // This section is removed, dashboard shows agents now.
+            // Redirect or just show dashboard.
+            window.location.href = '/?section=dashboard';
         } else if (sectionName === 'chat') {
-            this.loadChatAgents();
+            await this.loadChatAgents();
+            // Always enable the change agent button on the chat page
+            // so the user can make an initial selection.
+            const changeAgentBtn = document.getElementById('change-agent-btn');
+            if (changeAgentBtn) changeAgentBtn.disabled = false;
         }
+        // Other sections can have their data loading logic here
     }
 
     showLoading(show) {
@@ -510,22 +519,10 @@ class CustodianAIApp {
         alert('Error: ' + message);
     }
 
-    async refreshDashboard() {
-        this.showLoading(true);
-        try {
-            await this.loadArmyStatus();
-        } catch (error) {
-            this.showError('Failed to refresh dashboard');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
     startPeriodicUpdates() {
         // Update army status every 30 seconds
-        setInterval(() => {
-            this.loadArmyStatus();
-        }, 30000);
+        // This can be re-enabled if needed for live status updates on the dashboard
+        // setInterval(() => { this.loadAgents(); }, 30000);
     }
 }
 
@@ -536,28 +533,9 @@ window.showSection = function(sectionName) {
     }
 };
 
-window.toggleAgentStatus = function() {
-    const panel = document.querySelector('.floating-agent-status');
-    const icon = document.querySelector('.status-toggle i');
-    
-    if (panel.classList.contains('collapsed')) {
-        panel.classList.remove('collapsed');
-        icon.className = 'fas fa-chevron-up';
-    } else {
-        panel.classList.add('collapsed');
-        icon.className = 'fas fa-chevron-down';
-    }
-};
-
 window.sendMessage = function() {
     if (window.app) {
         window.app.sendMessage();
-    }
-};
-
-window.refreshDashboard = function() {
-    if (window.app) {
-        window.app.refreshDashboard();
     }
 };
 
