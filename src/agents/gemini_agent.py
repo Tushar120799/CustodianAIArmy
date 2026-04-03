@@ -67,10 +67,12 @@ class GeminiAgent(BaseAgent):
 				user_message=message.content,
 				context=message.metadata.get("context", {})
 			)
+			# Ensure code blocks, JSON, and similar are always wrapped in triple backticks
+			formatted_response = self._format_code_blocks(response)
 			response_message = AgentMessage(
 				sender_id=self.agent_id,
 				receiver_id=message.sender_id,
-				content=response,
+				content=formatted_response,
 				message_type="text",
 				metadata={
 					"original_message_id": message.id,
@@ -91,6 +93,23 @@ class GeminiAgent(BaseAgent):
 				metadata={"error": str(e), "original_message_id": message.id}
 			)
 			return error_message
+
+	def _format_code_blocks(self, text: str) -> str:
+		"""Ensure all code, JSON, or similar blocks are wrapped in triple backticks."""
+		import re
+		# If already contains code blocks, return as is
+		if '```' in text:
+			return text
+		# Detect Python code (simple heuristic)
+		if re.search(r"def |class |import |print\(", text):
+			return f"```python\n{text}\n```"
+		# Detect JSON
+		if text.strip().startswith('{') and text.strip().endswith('}'):
+			return f"```json\n{text}\n```"
+		# Detect other code-like content (e.g., XML, HTML, SQL)
+		if re.search(r"<\w+>|SELECT |INSERT |UPDATE |DELETE ", text):
+			return f"```\n{text}\n```"
+		return text
 
 	async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
 		"""Execute a specific task using a Gemini model"""
