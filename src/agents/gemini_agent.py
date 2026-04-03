@@ -12,5 +12,119 @@ from src.core.logging_config import get_logger
 
 
 class GeminiAgent(BaseAgent):
-	"""Agent powered by Google Gemini models"""
-	# ...full implementation copied from nemotron_agent.py...
+		"""Agent powered by Google Gemini models"""
+
+		def __init__(
+			self,
+			agent_id: str = None,
+			name: str = "GeminiAgent",
+			agent_type: AgentType = AgentType.MAIN,
+			specialization: str = "general",
+			capabilities: List[AgentCapability] = None
+		):
+			default_capabilities = [
+				AgentCapability(
+					name="text_generation",
+					description="Generate human-like text responses",
+					parameters={"max_tokens": 2048, "temperature": 0.7}
+				),
+				AgentCapability(
+					name="conversation",
+					description="Engage in natural conversations",
+					parameters={"context_window": 4096}
+				),
+				AgentCapability(
+					name="task_execution",
+					description="Execute various AI tasks",
+					parameters={"timeout": 30}
+				)
+			]
+			if capabilities:
+				default_capabilities.extend(capabilities)
+			super().__init__(
+				agent_id=agent_id,
+				name=name,
+				agent_type=agent_type,
+				capabilities=default_capabilities
+			)
+			self.specialization = specialization
+			self.api_client = httpx.AsyncClient(
+				base_url=settings.GEMINI_API_URL,
+				headers={"Content-Type": "application/json"},
+				timeout=30.0
+			)
+			self.logger.info(f"GeminiAgent {self.name} initialized with specialization: {specialization}")
+
+		async def process_message(self, message: AgentMessage) -> AgentMessage:
+			"""Process an incoming message using a Gemini model"""
+			try:
+				self.update_status(AgentStatus.BUSY)
+				system_prompt = self._get_system_prompt()
+				response = await self._call_gemini_api(
+					system_prompt=system_prompt,
+					user_message=message.content,
+					context=message.metadata.get("context", {})
+				)
+				response_message = AgentMessage(
+					sender_id=self.agent_id,
+					receiver_id=message.sender_id,
+					content=response,
+					message_type="text",
+					metadata={
+						"original_message_id": message.id,
+						"agent_specialization": self.specialization,
+						"processing_time": (datetime.utcnow() - message.timestamp).total_seconds()
+					}
+				)
+				self.update_status(AgentStatus.IDLE)
+				return response_message
+			except Exception as e:
+				self.logger.error(f"Error processing message: {str(e)}")
+				self.update_status(AgentStatus.ERROR)
+				error_message = AgentMessage(
+					sender_id=self.agent_id,
+					receiver_id=message.sender_id,
+					content=f"Error processing your request: {str(e)}",
+					message_type="error",
+					metadata={"error": str(e), "original_message_id": message.id}
+				)
+				return error_message
+
+		async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+			"""Execute a specific task using a Gemini model"""
+			try:
+				self.update_status(AgentStatus.BUSY)
+				task_type = task.get("type", "general")
+				task_description = task.get("description", "")
+				task_parameters = task.get("parameters", {})
+				if task_type in ["complex_analysis", "multi_step"] and self.sub_agents:
+					return await self._handle_complex_task(task)
+				system_prompt = self._get_task_prompt(task_type)
+				response = await self._call_gemini_api(
+					system_prompt=system_prompt,
+					user_message=task_description,
+					context=task_parameters
+				)
+				result = {
+					"task_id": task.get("id", "unknown"),
+					"status": "completed",
+					"result": response,
+					"agent_id": self.agent_id,
+					"agent_name": self.name,
+					"execution_time": datetime.utcnow().isoformat(),
+					"specialization": self.specialization
+				}
+				self.update_status(AgentStatus.IDLE)
+				return result
+			except Exception as e:
+				self.logger.error(f"Error executing task: {str(e)}")
+				self.update_status(AgentStatus.ERROR)
+				return {
+					"task_id": task.get("id", "unknown"),
+					"status": "failed",
+					"error": str(e),
+					"agent_id": self.agent_id,
+					"agent_name": self.name
+				}
+
+		# ...existing helper methods (_call_gemini_api, _get_system_prompt, etc.) remain unchanged...
