@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custodian AI Army - Command Center</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <h1>Custodian AI Army</h1>
+                    <span class="subtitle">Command Center</span>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Active Agents</span>
+                        <span class="stat-value" id="active-agents">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Tasks Completed</span>
+                        <span class="stat-value" id="tasks-completed">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">System Status</span>
+                        <span class="stat-value status-online" id="system-status">ONLINE</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <div class="nav-item active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="nav-item" data-section="agents">
+                        <i class="fas fa-users"></i>
+                        <span>Agent Army</span>
+                    </div>
+                    <div class="nav-item" data-section="chat">
+                        <i class="fas fa-comments"></i>
+                        <span>AI Chat</span>
+                    </div>
+                    <div class="nav-item" data-section="tasks">
+                        <i class="fas fa-tasks"></i>
+                        <span>Task Center</span>
+                    </div>
+                    <div class="nav-item" data-section="analytics">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section active">
+                    <div class="section-header">
+                        <h2>Command Dashboard</h2>
+                        <p>Monitor and control your AI agent army</p>
+                    </div>
+                    
+                    <div class="dashboard-grid">
+                        <!-- Army Overview -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Army Overview</h3>
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="overview-stats">
+                                    <div class="overview-stat">
+                                        <span class="stat-number" id="total-agents">0</span>
+                                        <span class="stat-text">Total Agents</span>
+                                    </div>
+                                    <div class="overview-stat">
+                                        <span class="stat-number" id="main-agents">0</span>
+                                        <span class="stat-text">Main Agents</span>
+                                    </div>
+                                    <div class="overview-stat">
+                                        <span class="stat-number" id="sub-agents">0</span>
+                                        <span class="stat-text">Sub Agents</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Quick Actions</h3>
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="quick-actions">
+                                    <button class="action-btn" onclick="showSection('chat')">
+                                        <i class="fas fa-comments"></i>
+                                        Start Chat
+                                    </button>
+                                    <button class="action-btn" onclick="showSection('tasks')">
+                                        <i class="fas fa-plus"></i>
+                                        New Task
+                                    </button>
+                                    <button class="action-btn" onclick="refreshDashboard()">
+                                        <i class="fas fa-sync"></i>
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agent Status -->
+                        <div class="dashboard-card full-width">
+                            <div class="card-header">
+                                <h3>Agent Status</h3>
+                                <i class="fas fa-heartbeat"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="agent-status-grid" id="agent-status-grid">
+                                    <!-- Agent status items will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Agents Section -->
+                <section id="agents" class="content-section">
+                    <div class="section-header">
+                        <h2>Agent Army</h2>
+                        <p>Manage your specialized AI agents</p>
+                    </div>
+                    
+                    <div class="agents-container">
+                        <div class="agents-grid" id="agents-grid">
+                            <!-- Agent cards will be populated here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Chat Section -->
+                <section id="chat" class="content-section">
+                    <div class="section-header">
+                        <h2>AI Chat Interface</h2>
+                        <p>Communicate with your AI agents</p>
+                    </div>
+                    
+                    <div class="chat-container">
+                        <div class="chat-sidebar">
+                            <h3>Available Agents</h3>
+                            <div class="agent-list" id="chat-agent-list">
+                                <!-- Agent list will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="chat-main">
+                            <div class="chat-header">
+                                <span id="current-agent">Select an agent to start chatting</span>
+                            </div>
+                            
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="welcome-message">
+                                    <i class="fas fa-robot"></i>
+                                    <p>Welcome to the Custodian AI Army Command Center!</p>
+                                    <p>Select an agent from the sidebar to begin your conversation.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="chat-input-container">
+                                <input type="text" id="chat-input" placeholder="Type your message..." disabled>
+                                <button id="send-btn" onclick="sendMessage()" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tasks Section -->
+                <section id="tasks" class="content-section">
+                    <div class="section-header">
+                        <h2>Task Center</h2>
+                        <p>Create and manage AI tasks</p>
+                    </div>
+                    
+                    <div class="tasks-container">
+                        <div class="task-creator">
+                            <h3>Create New Task</h3>
+                            <form id="task-form">
+                                <div class="form-group">
+                                    <label for="task-description">Task Description</label>
+                                    <textarea id="task-description" placeholder="Describe what you want the AI to do..." required></textarea>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="task-type">Task Type</label>
+                                        <select id="task-type">
+                                            <option value="general">General</option>
+                                            <option value="analysis">Analysis</option>
+                                            <option value="creative">Creative</option>
+                                            <option value="technical">Technical</option>
+                                            <option value="research">Research</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="preferred-agent">Preferred Agent</label>
+                                        <select id="preferred-agent">
+                                            <option value="">Auto-select</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="submit-btn">
+                                    <i class="fas fa-rocket"></i>
+                                    Execute Task
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="task-results" id="task-results">
+                            <h3>Task Results</h3>
+                            <div class="results-placeholder">
+                                <i class="fas fa-clipboard-list"></i>
+                                <p>Task results will appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Section -->
+                <section id="analytics" class="content-section">
+                    <div class="section-header">
+                        <h2>Analytics Dashboard</h2>
+                        <p>Monitor performance and usage statistics</p>
+                    </div>
+                    
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h3>Agent Performance</h3>
+                            <div class="chart-placeholder">
+                                <i class="fas fa-chart-bar"></i>
+                                <p>Performance metrics coming soon</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analytics-card">
+                            <h3>Task Distribution</h3>
+                            <div class="chart-placeholder">
+                                <i class="fas fa-chart-pie"></i>
+                                <p>Task analytics coming soon</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+<!-- Floating Agent Status Panel -->
+    <div class="floating-agent-status">
+        <div class="status-header">
+            <h3>Agent Status</h3>
+            <button class="status-toggle" onclick="toggleAgentStatus()">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </div>
+        <div class="status-content" id="floating-agent-status-content">
+            <!-- Agent status items will be populated here -->
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="/static/js/app.js"></script>
