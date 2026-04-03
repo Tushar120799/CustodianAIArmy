@@ -11,87 +11,89 @@ from src.core.config import settings
 from src.core.logging_config import get_logger
 
 
+
 class GeminiAgent(BaseAgent):
-			def _get_system_prompt(self) -> str:
-				"""Get system prompt based on agent specialization"""
-				prompts = {
-					"general": "You are a helpful AI assistant. Provide accurate, helpful, and engaging responses.",
-					"analyst": "You are a data analyst AI. Focus on analytical thinking, data interpretation, and insights.",
-					"creative": "You are a creative AI assistant. Focus on creative writing, brainstorming, and innovative solutions.",
-					"technical": "You are a technical AI assistant. Focus on technical accuracy, problem-solving, and detailed explanations.",
-					"researcher": "You are a research AI assistant. Focus on thorough research, fact-checking, and comprehensive analysis.",
-					"coordinator": "You are a coordination AI. Focus on task management, delegation, and team coordination."
-				}
-				return prompts.get(self.specialization, prompts["general"])
+	"""Agent powered by Google Gemini models"""
 
-			def _get_task_prompt(self, task_type: str) -> str:
-				"""Get task-specific system prompt"""
-				prompts = {
-					"analysis": "You are an expert analyst. Provide thorough analysis with clear insights and recommendations.",
-					"writing": "You are an expert writer. Create well-structured, engaging, and high-quality content.",
-					"coding": "You are an expert programmer. Provide clean, efficient, and well-documented code solutions.",
-					"research": "You are an expert researcher. Provide comprehensive, accurate, and well-sourced information.",
-					"planning": "You are an expert planner. Create detailed, actionable, and realistic plans.",
-				}
-				return prompts.get(task_type, self._get_system_prompt())
+	def _get_system_prompt(self) -> str:
+		"""Get system prompt based on agent specialization"""
+		prompts = {
+			"general": "You are a helpful AI assistant. Provide accurate, helpful, and engaging responses.",
+			"analyst": "You are a data analyst AI. Focus on analytical thinking, data interpretation, and insights.",
+			"creative": "You are a creative AI assistant. Focus on creative writing, brainstorming, and innovative solutions.",
+			"technical": "You are a technical AI assistant. Focus on technical accuracy, problem-solving, and detailed explanations.",
+			"researcher": "You are a research AI assistant. Focus on thorough research, fact-checking, and comprehensive analysis.",
+			"coordinator": "You are a coordination AI. Focus on task management, delegation, and team coordination."
+		}
+		return prompts.get(self.specialization, prompts["general"])
 
-			async def _call_gemini_api(
-				self,
-				system_prompt: str,
-				user_message: str,
-				context: Dict[str, Any] = None
-			) -> str:
-				"""Call the Google Gemini API"""
-				if not settings.GEMINI_API_KEY:
-					self.logger.error("GEMINI_API_KEY not configured.")
-					raise ValueError("GEMINI_API_KEY must be set to use the agent.")
+	def _get_task_prompt(self, task_type: str) -> str:
+		"""Get task-specific system prompt"""
+		prompts = {
+			"analysis": "You are an expert analyst. Provide thorough analysis with clear insights and recommendations.",
+			"writing": "You are an expert writer. Create well-structured, engaging, and high-quality content.",
+			"coding": "You are an expert programmer. Provide clean, efficient, and well-documented code solutions.",
+			"research": "You are an expert researcher. Provide comprehensive, accurate, and well-sourced information.",
+			"planning": "You are an expert planner. Create detailed, actionable, and realistic plans.",
+		}
+		return prompts.get(task_type, self._get_system_prompt())
 
-				full_prompt = f"{system_prompt}\n\nUser Request: {user_message}"
-				payload = {
-					"contents": [{"parts": [{"text": full_prompt}]}],
-					"generationConfig": {
-						"temperature": 0.7,
-						"topP": 1.0,
-						"maxOutputTokens": 1024,
-					}
-				}
-				model = settings.GEMINI_MODEL or "gemini-2.5-flash"
-				api_url = f"/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
-				try:
-					response = await self.api_client.post(api_url, json=payload)
-					response.raise_for_status()
-					data = response.json()
-					if 'candidates' in data and len(data['candidates']) > 0:
-						candidate = data['candidates'][0]
-						if 'content' in candidate and 'parts' in candidate['content'] and len(candidate['content']['parts']) > 0:
-							text = candidate['content']['parts'][0].get('text', '')
-							if '```' not in text and ("def " in text or "class " in text or "import " in text):
-								return f"```python\n{text}\n```"
-							return text
-						elif 'finishReason' in candidate:
-							return f"API didn't return text. Finish reason: {candidate.get('finishReason')}"
-					return f"Unexpected API response format: {data}"
-				except httpx.HTTPStatusError as e:
-					self.logger.error(f"HTTP error calling Gemini API: Status {e.response.status_code}, Response: {e.response.text}")
-					return f"API Error (Status: {e.response.status_code}): {e.response.text}"
-				except Exception as e:
-					self.logger.error(f"Error calling Gemini API: {e}")
-					return f"I encountered an unexpected error when trying to communicate with the API for your request: '{user_message}'. Details: {str(e)}."
+	async def _call_gemini_api(
+		self,
+		system_prompt: str,
+		user_message: str,
+		context: Dict[str, Any] = None
+	) -> str:
+		"""Call the Google Gemini API"""
+		if not settings.GEMINI_API_KEY:
+			self.logger.error("GEMINI_API_KEY not configured.")
+			raise ValueError("GEMINI_API_KEY must be set to use the agent.")
 
-			async def _handle_complex_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-				self.logger.info(f"Handling complex task with {len(self.sub_agents)} sub-agents")
-				subtasks = self._decompose_task(task)
-				results = []
-				for i, subtask in enumerate(subtasks):
-					if i < len(self.sub_agents):
-						result = await self.sub_agents[i].execute_task(subtask)
-						results.append(result)
-					else:
-						result = await self.execute_task(subtask)
-						results.append(result)
-				final_result = await self._synthesize_results(task, results)
-				return final_result
-		"""Agent powered by Google Gemini models"""
+		full_prompt = f"{system_prompt}\n\nUser Request: {user_message}"
+		payload = {
+			"contents": [{"parts": [{"text": full_prompt}]}],
+			"generationConfig": {
+				"temperature": 0.7,
+				"topP": 1.0,
+				"maxOutputTokens": 1024,
+			}
+		}
+		model = settings.GEMINI_MODEL or "gemini-2.5-flash"
+		api_url = f"/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
+		try:
+			response = await self.api_client.post(api_url, json=payload)
+			response.raise_for_status()
+			data = response.json()
+			if 'candidates' in data and len(data['candidates']) > 0:
+				candidate = data['candidates'][0]
+				if 'content' in candidate and 'parts' in candidate['content'] and len(candidate['content']['parts']) > 0:
+					text = candidate['content']['parts'][0].get('text', '')
+					if '```' not in text and ("def " in text or "class " in text or "import " in text):
+						return f"```python\n{text}\n```"
+					return text
+				elif 'finishReason' in candidate:
+					return f"API didn't return text. Finish reason: {candidate.get('finishReason')}"
+			return f"Unexpected API response format: {data}"
+		except httpx.HTTPStatusError as e:
+			self.logger.error(f"HTTP error calling Gemini API: Status {e.response.status_code}, Response: {e.response.text}")
+			return f"API Error (Status: {e.response.status_code}): {e.response.text}"
+		except Exception as e:
+			self.logger.error(f"Error calling Gemini API: {e}")
+			return f"I encountered an unexpected error when trying to communicate with the API for your request: '{user_message}'. Details: {str(e)}."
+
+	async def _handle_complex_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+		self.logger.info(f"Handling complex task with {len(self.sub_agents)} sub-agents")
+		subtasks = self._decompose_task(task)
+		results = []
+		for i, subtask in enumerate(subtasks):
+			if i < len(self.sub_agents):
+				result = await self.sub_agents[i].execute_task(subtask)
+				results.append(result)
+			else:
+				result = await self.execute_task(subtask)
+				results.append(result)
+		final_result = await self._synthesize_results(task, results)
+		return final_result
 
 		def __init__(
 			self,
