@@ -128,6 +128,7 @@ class GeminiAgent(BaseAgent):
 				"agent_id": self.agent_id,
 				"agent_name": self.name
 			}
+	def _get_system_prompt(self) -> str:
 		"""Get system prompt based on agent specialization"""
 		prompts = {
 			"general": "You are a helpful AI assistant. Provide accurate, helpful, and engaging responses.",
