@@ -1,0 +1,3 @@
+[submodule "dependencies/Programming-Slides"]
+	path = dependencies/Programming-Slides
+	url = https://github.com/Tushar120799/Programming-Slides.git

@@ -1,3 +1,48 @@
+// Learning Path Data
+const learningPathData = {
+    "paths": [
+        { name: "React", description: "Build modern, dynamic user interfaces with this popular JavaScript library.", icon: "fab fa-react" },
+        { name: "Vue", description: "An approachable, performant and versatile framework for building web user interfaces.", icon: "fab fa-vuejs" },
+        { name: "Python", description: "Master the versatile language for web development, data science, and AI.", icon: "fab fa-python" },
+        { name: "Python and Data Science", description: "Use Python for data analysis, visualization, and machine learning.", icon: "fas fa-chart-pie" },
+        { name: "General", description: "Learn the fundamentals of programming and computer science concepts.", icon: "fas fa-laptop-code" },
+        { name: "HTML and CSS", description: "The building blocks of the web. Create and style web pages from scratch.", icon: "fab fa-html5" },
+        { name: "JavaScript and TypeScript", description: "Master the core language of the web and its typed superset.", icon: "fab fa-js-square" },
+        { name: "Data Types and Data Formats", description: "Understand JSON, XML, CSV, and other common data formats.", icon: "fas fa-file-alt" },
+        { name: "Databases", description: "Learn about SQL and NoSQL databases for storing and retrieving data.", icon: "fas fa-database" },
+        { name: "Others", description: "Explore various other technologies and programming concepts.", icon: "fas fa-ellipsis-h" }
+    ]
+};
+
+// Agent UI Enhancement Data
+const agentUIData = {
+    "CommanderAI": {
+        description: "Orchestrates tasks and coordinates all other AI agents to achieve mission objectives.",
+        image: "https://i.imgur.com/jJtVq3A.png", // commander icon
+        useCases: [
+            "\"Summarize the status of all active agents.\"",
+            "\"Assign a research task about market trends to the best agent.\"",
+            "\"Generate a report based on the latest findings from AnalystAI and ResearchAI.\""
+        ]
+    },
+    "AnalystAI": {
+        description: "Specializes in data interpretation, market trends, and statistical analysis.",
+        image: "https://i.imgur.com/sUoYyM1.png" // analyst icon
+    },
+    "CreativeAI": {
+        description: "Generates novel concepts, content, and visual designs for creative tasks.",
+        image: "https://i.imgur.com/yV2zVsm.png" // creative icon
+    },
+    "TechnicalAI": {
+        description: "Handles code generation, system architecture, and complex technical problem-solving.",
+        image: "https://i.imgur.com/O3E2V7A.png" // technical icon
+    },
+    "ResearchAI": {
+        description: "Conducts in-depth research, fact-checking, and information synthesis.",
+        image: "https://i.imgur.com/rK4fJpP.png" // research icon
+    }
+};
+
 // Export for tests
 if (typeof module !== 'undefined') {
     module.exports = {
@@ -83,6 +128,7 @@ class CustodianAIApp {
 
     async loadInitialData() {
         try {
+            // Simplified data loading for the new structure
             await Promise.all([
                 this.loadAgents(),
                 this.loadChatAgents()
@@ -101,12 +147,42 @@ class CustodianAIApp {
             this.agents = data.agents;
             this.updateAgentsGrid(data.agents); // This now populates the homepage
             this.updatePreferredAgentSelect(data.agents);
+            this.updateDashboardAgentList(data.agents);
 
             // Update the active agents count in the header
             document.getElementById('active-agents').textContent = data.agents.length;
         } catch (error) {
             console.error('Error loading agents:', error);
         }
+    }
+
+    updateLearningPathsGrid() {
+        const grid = document.getElementById('learning-paths-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        const createPathCard = (path) => {
+            const card = document.createElement('div');
+            card.className = 'learning-path-card'; // Use a new class for styling
+            card.innerHTML = `
+                <div class="path-icon">
+                    <i class="${path.icon} fa-2x"></i>
+                </div>
+                <div class="path-info">
+                    <h4 class="path-title">${path.name}</h4>
+                    <p class="path-description">${path.description}</p>
+                </div>
+                <div class="path-footer">
+                    <button class="btn btn-primary btn-sm">Start Learning</button>
+                </div>
+            `;
+            return card;
+        };
+
+        // Add Language Paths
+        grid.innerHTML += '<h3>Available Learning Paths</h3>';
+        learningPathData.paths.forEach(path => grid.appendChild(createPathCard(path)));
     }
 
     async loadChatAgents() {
@@ -127,7 +203,7 @@ class CustodianAIApp {
 
     updateAgentsGrid(agents) {
         const grid = document.getElementById('agents-grid');
-        if (!grid) return;
+        if (!grid) return; // This grid is no longer used on the dashboard, but we keep the function for now.
 
         grid.innerHTML = '';
         
@@ -135,6 +211,8 @@ class CustodianAIApp {
             const agentCard = document.createElement('div');
             agentCard.className = 'agent-card';
             
+            const uiData = agentUIData[agent.name] || { description: "A versatile AI agent ready for any task.", image: "https://i.imgur.com/fC3C6gI.png" };
+
             const capabilities = agent.capabilities.map(cap => 
                 `<span class="capability-tag">${cap.name}</span>`
             ).join('');
@@ -143,14 +221,15 @@ class CustodianAIApp {
             const chatUrl = `/?section=chat&agent_id=${agent.agent_id}`;
             
             agentCard.innerHTML = `
-                <div class="agent-header">
-                    <div class="agent-title">${agent.name}</div>
-                    <div class="agent-type">${agent.type}</div>
+                <div class="agent-card-header">
+                    <img src="${uiData.image}" alt="${agent.name} icon" class="agent-icon">
+                    <div class="agent-title-group">
+                        <div class="agent-title">${agent.name}</div>
+                        <div class="agent-specialization">${agent.specialization || 'General'}</div>
+                    </div>
                 </div>
-                <div class="agent-info">
-                    <p><strong>Specialization:</strong> ${agent.specialization || 'General'}</p>
-                    <p><strong>Status:</strong> <span class="agent-status status-${agent.status}">${agent.status}</span></p>
-                    <p><strong>Sub-agents:</strong> ${agent.sub_agents_count}</p>
+                <div class="agent-header">
+                    <p class="agent-description">${uiData.description}</p>
                 </div>
                 <div class="agent-capabilities">
                     ${capabilities}
@@ -162,6 +241,62 @@ class CustodianAIApp {
             
             grid.appendChild(agentCard);
         });
+    }
+
+    updateDashboardAgentList(agents) {
+        const list = document.getElementById('dashboard-agent-list');
+        if (!list) return;
+
+        list.innerHTML = '';
+        const mainAgents = agents.filter(agent => agent.type.toLowerCase() === 'main');
+
+        mainAgents.forEach(agent => {
+            const agentItem = document.createElement('div');
+            agentItem.className = 'agent-list-item';
+            agentItem.dataset.agentId = agent.agent_id;
+
+            agentItem.innerHTML = `
+                <div class="agent-name">${agent.name}</div>
+                <div class="agent-specialization">${agent.specialization || 'General'}</div>
+            `;
+
+            agentItem.addEventListener('click', () => {
+                // Highlight this item
+                list.querySelectorAll('.agent-list-item').forEach(item => item.classList.remove('active'));
+                agentItem.classList.add('active');
+
+                // Show details and select for chat
+                this.showAgentDetails(agent);
+                this.selectChatAgent(agent);
+            });
+
+            list.appendChild(agentItem);
+        });
+    }
+
+    showAgentDetails(agent) {
+        const detailView = document.getElementById('agent-detail-view');
+        if (!detailView) return;
+
+        const uiData = agentUIData[agent.name] || { description: "A versatile AI agent ready for any task.", useCases: ["\"Ask me anything!\""] };
+        const useCasesHtml = uiData.useCases.map(uc => `<li><code>${uc}</code></li>`).join('');
+
+        detailView.innerHTML = `
+            <div class="agent-card-header">
+                <img src="${uiData.image}" alt="${agent.name} icon" class="agent-icon">
+                <div class="agent-title-group">
+                    <div class="agent-title">${agent.name}</div>
+                    <div class="agent-specialization">${agent.specialization || 'General'}</div>
+                </div>
+            </div>
+            <div class="agent-header">
+                <p class="agent-description">${uiData.description}</p>
+            </div>
+            <div class="agent-use-cases">
+                <h4>Use Case Examples:</h4>
+                <ul>${useCasesHtml}</ul>
+            </div>
+        `;
     }
 
     updateChatAgentList(agents) {
@@ -231,15 +366,12 @@ class CustodianAIApp {
     }
 
     selectChatAgent(agent) {
+        if (!agent) return;
         // Update UI
         document.querySelectorAll('.agent-list-item').forEach(item => {
-            item.classList.remove('active');
+            if(item.dataset.agentId === agent.agent_id) item.classList.add('active');
+            else item.classList.remove('active');
         });
-        
-        const selectedItem = document.querySelector(`[data-agent-id="${agent.agent_id}"]`);
-        if (selectedItem) {
-            selectedItem.classList.add('active');
-        }
         
         // Update current agent
         this.currentAgent = agent;
@@ -343,12 +475,22 @@ class CustodianAIApp {
                         lang = langClass.replace('language-', '');
                     }
                     
-                    const code = codeBlock.textContent;
+                    const codeToCopy = codeBlock.textContent;
                     
                     const runBtn = document.createElement('button');
                     runBtn.className = 'run-code-btn';
                     runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
-                    runBtn.onclick = () => this.runCode(code, lang, pre);
+                    runBtn.onclick = () => this.runCode(codeToCopy, lang, pre);
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-code-btn';
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    copyBtn.onclick = () => {
+                        navigator.clipboard.writeText(codeToCopy).then(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                            setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+                        });
+                    };
                     
                     pre.style.position = 'relative';
                     pre.appendChild(runBtn);
@@ -491,14 +633,19 @@ class CustodianAIApp {
         }
         
         // Load section-specific data
-        if (sectionName === 'agents') {
-            // This section is removed, dashboard shows agents now.
-            // Redirect or just show dashboard.
-            window.location.href = '/?section=dashboard';
+        if (sectionName === 'learn') {
+            this.updateLearningPathsGrid();
+        } else if (sectionName === 'dashboard') {
+            // Move chat window into the dashboard
+            const chatWindowContainer = document.getElementById('dashboard-chat-window'); // The target container on the dashboard
+            const chatMain = document.getElementById('chat-main'); // The main chat window element
+            if (chatWindowContainer && chatMain) {
+                chatWindowContainer.innerHTML = ''; // Clear any previous content
+                chatWindowContainer.appendChild(chatMain); // Move only the chat window
+                chatMain.style.display = 'flex'; // Ensure it's visible
+            }
         } else if (sectionName === 'chat') {
             await this.loadChatAgents();
-            // Always enable the change agent button on the chat page
-            // so the user can make an initial selection.
             const changeAgentBtn = document.getElementById('change-agent-btn');
             if (changeAgentBtn) changeAgentBtn.disabled = false;
         }

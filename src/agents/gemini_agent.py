@@ -61,6 +61,69 @@ class GeminiAgent(BaseAgent):
 		"""Process an incoming message using a Gemini model"""
 		try:
 			self.update_status(AgentStatus.BUSY)
+
+			# If this is the coordinator, it should delegate and return the expert's response.
+			if self.specialization == "coordinator":
+				# This is a task, so delegate it.
+				task = {
+					"id": f"task_{message.id}",
+					"type": "delegated_task", # A generic type for the coordinator to handle
+					"description": message.content,
+					"parameters": message.metadata
+				}
+				task_result = await self.execute_task(task)
+
+				# Format the task result as a chat message
+				response_content = task_result.get("result", "Task completed, but no result was returned.")
+				if task_result.get("status") == "failed":
+					response_content = f"Sorry, the task failed. Error: {task_result.get('error')}"
+
+				return AgentMessage(
+					sender_id=self.agent_id,
+					receiver_id=message.sender_id,
+					content=response_content,
+					message_type="text",
+					metadata={"original_message_id": message.id, "delegated_task": True}
+				)
+
+			# For all other agents, process normally
+			system_prompt = self._get_system_prompt()
+			response = await self._call_gemini_api(
+				system_prompt=system_prompt,
+				user_message=message.content,
+				context=message.metadata.get("context", {})
+			)
+			# Ensure code blocks, JSON, and similar are always wrapped in triple backticks
+			formatted_response = self._format_code_blocks(response)
+			response_message = AgentMessage(
+				sender_id=self.agent_id,
+				receiver_id=message.sender_id,
+				content=formatted_response,
+				message_type="text",
+				metadata={
+					"original_message_id": message.id,
+					"agent_specialization": self.specialization,
+					"processing_time": (datetime.utcnow() - message.timestamp).total_seconds()
+				}
+			)
+			self.update_status(AgentStatus.IDLE)
+			return response_message
+		except Exception as e:
+			self.logger.error(f"Error processing message: {str(e)}")
+			self.update_status(AgentStatus.ERROR)
+			error_message = AgentMessage(
+				sender_id=self.agent_id,
+				receiver_id=message.sender_id,
+				content=f"Error processing your request: {str(e)}",
+				message_type="error",
+				metadata={"error": str(e), "original_message_id": message.id}
+			)
+			return error_message
+
+	async def process_message_old(self, message: AgentMessage) -> AgentMessage:
+		"""Process an incoming message using a Gemini model"""
+		try:
+			self.update_status(AgentStatus.BUSY)
 			system_prompt = self._get_system_prompt()
 			response = await self._call_gemini_api(
 				system_prompt=system_prompt,
@@ -133,11 +196,18 @@ class GeminiAgent(BaseAgent):
 			task_parameters = task.get("parameters", {})
 			if task_type in ["complex_analysis", "multi_step"] and self.sub_agents:
 				return await self._handle_complex_task(task)
+
+			# If the task was delegated by the coordinator, get the correct prompt
+			if task_type == "delegated_task":
+				system_prompt = self._get_delegated_task_prompt(task_description)
+			else:
+				system_prompt = self._get_task_prompt(task_type)
+
 			system_prompt = self._get_task_prompt(task_type)
 			response = await self._call_gemini_api(
 				system_prompt=system_prompt,
 				user_message=task_description,
-				context=task_parameters
+				context=task_parameters,
 			)
 			result = {
 				"task_id": task.get("id", "unknown"),
@@ -168,9 +238,27 @@ class GeminiAgent(BaseAgent):
 			"creative": "You are a creative AI assistant. Focus on creative writing, brainstorming, and innovative solutions.",
 			"technical": "You are a technical AI assistant. Focus on technical accuracy, problem-solving, and detailed explanations.",
 			"researcher": "You are a research AI assistant. Focus on thorough research, fact-checking, and comprehensive analysis.",
-			"coordinator": "You are a coordination AI. Focus on task management, delegation, and team coordination."
+			"coordinator": """You are a silent, intelligent router. Your job is to receive a user's request and determine the best possible expert to answer it.
+Analyze the user's message to determine if it is a 'technical', 'analytical', 'creative', or 'research' question.
+- Technical questions involve code, software, or engineering.
+- Analytical questions involve data, numbers, or interpretation.
+- Creative questions involve writing, brainstorming, or design.
+- Research questions involve finding and summarizing information.
+Based on this analysis, you will adopt the persona of the corresponding expert (TechnicalAI, AnalystAI, CreativeAI, or ResearchAI) and provide a complete, expert-level response to the user's request.
+Do NOT mention that you are a router or that you are delegating the task. Simply answer the question as the expert would."""
 		}
 		return prompts.get(self.specialization, prompts["general"])
+
+	def _get_delegated_task_prompt(self, user_message: str) -> str:
+		"""
+		This is a simplified version of a router. In a real-world scenario, this would
+		use a more sophisticated model or logic to classify the user's request and
+		return the appropriate expert prompt.
+		"""
+		if any(keyword in user_message.lower() for keyword in ['code', 'python', 'program', 'factorial', 'javascript']):
+			return self._get_task_prompt("coding")
+		# Add other routing rules here...
+		return self._get_task_prompt("general") # Fallback
 
 	def _get_task_prompt(self, task_type: str) -> str:
 		"""Get task-specific system prompt"""
@@ -239,118 +327,3 @@ class GeminiAgent(BaseAgent):
 				results.append(result)
 		final_result = await self._synthesize_results(task, results)
 		return final_result
-
-		def __init__(
-			self,
-			agent_id: str = None,
-			name: str = "GeminiAgent",
-			agent_type: AgentType = AgentType.MAIN,
-			specialization: str = "general",
-			capabilities: List[AgentCapability] = None
-		):
-			default_capabilities = [
-				AgentCapability(
-					name="text_generation",
-					description="Generate human-like text responses",
-					parameters={"max_tokens": 2048, "temperature": 0.7}
-				),
-				AgentCapability(
-					name="conversation",
-					description="Engage in natural conversations",
-					parameters={"context_window": 4096}
-				),
-				AgentCapability(
-					name="task_execution",
-					description="Execute various AI tasks",
-					parameters={"timeout": 30}
-				)
-			]
-			if capabilities:
-				default_capabilities.extend(capabilities)
-			super().__init__(
-				agent_id=agent_id,
-				name=name,
-				agent_type=agent_type,
-				capabilities=default_capabilities
-			)
-			self.specialization = specialization
-			self.api_client = httpx.AsyncClient(
-				base_url=settings.GEMINI_API_URL,
-				headers={"Content-Type": "application/json"},
-				timeout=30.0
-			)
-			self.logger.info(f"GeminiAgent {self.name} initialized with specialization: {specialization}")
-
-		async def process_message(self, message: AgentMessage) -> AgentMessage:
-			"""Process an incoming message using a Gemini model"""
-			try:
-				self.update_status(AgentStatus.BUSY)
-				system_prompt = self._get_system_prompt()
-				response = await self._call_gemini_api(
-					system_prompt=system_prompt,
-					user_message=message.content,
-					context=message.metadata.get("context", {})
-				)
-				response_message = AgentMessage(
-					sender_id=self.agent_id,
-					receiver_id=message.sender_id,
-					content=response,
-					message_type="text",
-					metadata={
-						"original_message_id": message.id,
-						"agent_specialization": self.specialization,
-						"processing_time": (datetime.utcnow() - message.timestamp).total_seconds()
-					}
-				)
-				self.update_status(AgentStatus.IDLE)
-				return response_message
-			except Exception as e:
-				self.logger.error(f"Error processing message: {str(e)}")
-				self.update_status(AgentStatus.ERROR)
-				error_message = AgentMessage(
-					sender_id=self.agent_id,
-					receiver_id=message.sender_id,
-					content=f"Error processing your request: {str(e)}",
-					message_type="error",
-					metadata={"error": str(e), "original_message_id": message.id}
-				)
-				return error_message
-
-		async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-			"""Execute a specific task using a Gemini model"""
-			try:
-				self.update_status(AgentStatus.BUSY)
-				task_type = task.get("type", "general")
-				task_description = task.get("description", "")
-				task_parameters = task.get("parameters", {})
-				if task_type in ["complex_analysis", "multi_step"] and self.sub_agents:
-					return await self._handle_complex_task(task)
-				system_prompt = self._get_task_prompt(task_type)
-				response = await self._call_gemini_api(
-					system_prompt=system_prompt,
-					user_message=task_description,
-					context=task_parameters
-				)
-				result = {
-					"task_id": task.get("id", "unknown"),
-					"status": "completed",
-					"result": response,
-					"agent_id": self.agent_id,
-					"agent_name": self.name,
-					"execution_time": datetime.utcnow().isoformat(),
-					"specialization": self.specialization
-				}
-				self.update_status(AgentStatus.IDLE)
-				return result
-			except Exception as e:
-				self.logger.error(f"Error executing task: {str(e)}")
-				self.update_status(AgentStatus.ERROR)
-				return {
-					"task_id": task.get("id", "unknown"),
-					"status": "failed",
-					"error": str(e),
-					"agent_id": self.agent_id,
-					"agent_name": self.name
-				}
-
-		# ...existing helper methods (_call_gemini_api, _get_system_prompt, etc.) remain unchanged...

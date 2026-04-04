@@ -1,8 +1,243 @@
 /* Custom Styles for Custodian AI Army */
 
-/* Adjust header stats spacing on medium screens and up */
-@media (min-width: 768px) {
-    .header-stats {
-        margin-right: 1.5rem; /* Add some space to the right */
+/* --- Header Polish --- */
+#hamburger-btn {
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    background-color: rgba(0, 212, 255, 0.1);
+}
+#hamburger-btn:hover {
+    background-color: rgba(0, 212, 255, 0.2);
+}
+
+.glowing-robot-link i {
+    color: var(--accent-cyan);
+    text-shadow: 0 0 15px var(--accent-cyan); /* Softer glow */
+    transition: all 0.3s ease;
+}
+.glowing-robot-link:hover i {
+    color: #fff;
+    text-shadow: 0 0 25px var(--accent-cyan); /* Brighter glow on hover */
+}
+
+/* General Body & Readability Improvements - Softer Look */
+body {
+    font-family: 'Exo 2', sans-serif;
+    line-height: 1.6;
+    background-color: #0a0f18; /* Darker base for better contrast */
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(10, 15, 24, 0.95), rgba(10, 15, 24, 0.95)),
+                      repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 212, 255, 0.03) 1px, rgba(0, 212, 255, 0.03) 2px); /* Softer scan lines */
+    z-index: -2;
+    pointer-events: none;
+}
+
+/* --- Agent Card Redesign --- */
+.agent-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.25rem;
+    border: 1px solid rgba(0, 212, 255, 0.15); /* Softer border */
+    background-color: transparent; /* Make background transparent */
+    transition: all 0.3s ease;
+}
+
+.agent-card:hover {
+    background-color: rgba(0, 212, 255, 0.05); /* Add a very subtle hover effect */
+    border-color: rgba(0, 212, 255, 0.4);
+    transform: translateY(-5px);
+}
+
+.agent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.agent-icon {
+    width: 50px;
+    height: 50px;
+    filter: invert(75%) sepia(100%) saturate(3) hue-rotate(180deg);
+}
+
+.agent-title-group .agent-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.25rem;
+    color: #00d4ff;
+}
+
+.agent-title-group .agent-specialization {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+}
+
+.agent-description {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+    min-height: 60px; /* Ensure consistent height */
+}
+
+/* --- Chat Window Mobile Responsiveness Fix --- */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 180px); /* Full viewport height minus header and padding */
+}
+
+.chat-main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* Prevent parent from overflowing */
+}
+
+.chat-messages {
+    flex-grow: 1; /* Allow this to take up all available space */
+    overflow-y: auto; /* Enable scrolling for messages */
+    padding-bottom: 1rem;
+}
+
+.chat-input-container {
+    flex-shrink: 0; /* Prevent this from shrinking */
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+@media (max-width: 767px) {
+    .chat-container {
+        height: calc(100vh - 150px); /* Adjust for smaller header on mobile */
     }
+}
+
+/* --- Learning Path Styles --- */
+.learning-paths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.learning-paths-grid h3 {
+    grid-column: 1 / -1;
+    color: var(--accent-cyan);
+    font-family: 'Orbitron', sans-serif;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+    padding-bottom: 0.5rem;
+}
+
+.learning-path-card {
+    background-color: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    padding: 1.5rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+.learning-path-card:hover {
+    background-color: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.4);
+    transform: translateY(-5px);
+}
+
+.path-icon {
+    margin-bottom: 1rem;
+    color: var(--accent-cyan);
+}
+
+.path-title {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+/* --- Placeholder Styles --- */
+.placeholder-content {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+/* --- New Dashboard Layout --- */
+.dashboard-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.dashboard-sidebar {
+    flex: 0 0 280px; /* Fixed width for the agent list */
+    background-color: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.dashboard-sidebar h3 {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--accent-cyan);
+    margin-bottom: 1rem;
+}
+
+.dashboard-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.agent-detail-view {
+    background-color: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.agent-use-cases h4 {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--accent-cyan);
+    font-size: 1.1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.agent-use-cases ul {
+    padding-left: 1.2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+.agent-use-cases li {
+    margin-bottom: 0.5rem;
+}
+
+/* Code block buttons */
+.copy-code-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+pre:hover .copy-code-btn {
+    opacity: 1;
 }

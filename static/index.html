@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/static/css/custom.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"><link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
 </head>
 <body style="padding-top: 80px;"> <!-- Add padding to body to offset fixed header -->
 
@@ -19,12 +19,15 @@
         <header class="header fixed-top">
             <div class="header-content container-fluid d-flex align-items-center justify-content-between px-3 py-2 flex-wrap">
                 <!-- Left side: Burger and Logo -->
-                <div class="d-flex align-items-center gap-3">
-                    <button class="btn btn-icon-only text-info" id="logo-burger-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas" aria-label="Open menu">
-                        <i class="fas fa-robot fa-2x"></i>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-icon-only text-info p-0" id="hamburger-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas" aria-label="Open menu">
+                        <i class="fas fa-bars fa-lg"></i>
                     </button>
                     <div class="logo d-flex align-items-center gap-2">
-                        <h1 class="m-0 h5">Custodian AI Army</h1>
+                        <a href="/?section=dashboard" class="glowing-robot-link">
+                            <i class="fas fa-robot fa-2x"></i>
+                        </a>
+                        <h1 class="m-0 h5">Commander AI</h1>
                     </div>
                 </div>
     
@@ -58,10 +61,10 @@
                   </div>
                   <div class="offcanvas-body p-0">
                     <nav class="nav flex-column nav-menu" id="nav-menu">
-                        <a class="nav-link nav-item" data-section="dashboard" href="/?section=dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
-                        <a class="nav-link nav-item" data-section="chat" href="/?section=chat"><i class="fas fa-comments me-2"></i>AI Chat</a>
-                        <a class="nav-link nav-item" data-section="tasks" href="/?section=tasks"><i class="fas fa-tasks me-2"></i>Task Center</a>
-                        <a class="nav-link nav-item" data-section="analytics" href="/?section=analytics"><i class="fas fa-chart-line me-2"></i>Analytics</a>
+                        <a class="nav-link nav-item" data-section="dashboard" href="/?section=dashboard"><i class="fas fa-brain me-2"></i>Commander AI</a>
+                        <a class="nav-link nav-item" data-section="learn" href="/?section=learn"><i class="fas fa-graduation-cap me-2"></i>Learn with AI</a>
+                        <a class="nav-link nav-item" data-section="portfolio" href="/?section=portfolio"><i class="fab fa-github me-2"></i>Portfolio Builder</a>
+                        <a class="nav-link nav-item" data-section="build" href="/?section=build"><i class="fas fa-cubes me-2"></i>Build Your Product</a>
                     </nav>
                   </div>
                 </div>
@@ -73,13 +76,44 @@
                 <!-- Dashboard Section -->
                 <section id="dashboard" class="content-section">
                     <div class="section-header">
-                        <h2>Agent Army Command</h2>
-                        <p>Select an agent to begin a mission</p>
+                        <h2>Commander AI Dashboard</h2>
+                        <p>Select an agent from the list to view details and start a conversation.</p>
                     </div>
-                    <div class="agents-grid" id="agents-grid"></div>
+                    <div class="dashboard-container">
+                        <!-- Left Sidebar for Agent List -->
+                        <div class="dashboard-sidebar">
+                            <h3>Available Agents</h3>
+                            <div class="agent-list" id="dashboard-agent-list">
+                                <!-- Agent list will be populated here -->
+                            </div>
+                        </div>
+                        <!-- Right side for details and chat -->
+                        <div class="dashboard-main">
+                            <div id="agent-detail-view" class="agent-detail-view">
+                                <!-- Agent details will be populated here -->
+                                <div class="placeholder-content">
+                                    <i class="fas fa-hand-pointer fa-2x"></i>
+                                    <p>Select an agent to see their details and use cases.</p>
+                                </div>
+                            </div>
+                            <div id="dashboard-chat-window"></div>
+                        </div>
+                    </div>
                 </section>
+
+                <!-- Learn With AI Section -->
+                <section id="learn" class="content-section">
+                    <div class="section-header">
+                        <h2>Learn with AI</h2>
+                        <p>Choose a learning path to begin your journey. Each path includes AI-guided lessons and a real-time code editor.</p>
+                    </div>
+                    <div class="learning-paths-grid" id="learning-paths-grid">
+                        <!-- Learning paths will be populated here by app.js -->
+                    </div>
+                </section>
+
                 <!-- Chat Section -->
-                <section id="chat" class="content-section">
+                <section id="chat" class="content-section" style="display: none;">
                     <div class="section-header chat-header-mobile">
                         <h2>AI Chat Center</h2>
                         <div class="quick-actions-mobile d-flex justify-content-around w-100 mt-2">
@@ -180,7 +214,7 @@
                 </section>
 
                 <!-- Analytics Section -->
-                <section id="analytics" class="content-section">
+                <section id="analytics" class="content-section" style="display: none;">
                     <div class="section-header">
                         <h2>Analytics Dashboard</h2>
                         <p>Monitor performance and usage statistics</p>
@@ -202,6 +236,30 @@
                                 <p>Task analytics coming soon</p>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Portfolio Builder Section (Placeholder) -->
+                <section id="portfolio" class="content-section">
+                    <div class="section-header">
+                        <h2>Freelancing Portfolio Builder</h2>
+                        <p>This tool will fetch your repositories to automatically generate a professional portfolio.</p>
+                    </div>
+                    <div class="placeholder-content">
+                        <i class="fas fa-tools fa-3x"></i>
+                        <p>Portfolio Builder coming soon. This section will be replaced with a new dependency.</p>
+                    </div>
+                </section>
+
+                <!-- Build Your Product Section (Placeholder) -->
+                <section id="build" class="content-section">
+                    <div class="section-header">
+                        <h2>Build Your Product</h2>
+                        <p>An AI-assisted tool to help you design, plan, and build your own software products.</p>
+                    </div>
+                    <div class="placeholder-content">
+                        <i class="fas fa-rocket fa-3x"></i>
+                        <p>Product Builder coming soon. This section will be updated with new data dependencies.</p>
                     </div>
                 </section>
             </div>
