@@ -7,7 +7,8 @@ from typing import List, Dict, Any, Optional
 DB_PATH = "chat_history.db"
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -23,7 +24,7 @@ def init_db():
     conn.close()
 
 def get_chats_for_user(email: str) -> List[Dict[str, Any]]:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20)
     cursor = conn.cursor()
     cursor.execute('''
         SELECT id, user_email, title, start_time, last_updated, messages
@@ -47,7 +48,7 @@ def get_chats_for_user(email: str) -> List[Dict[str, Any]]:
     return chats
 
 def save_chat_session(chat_data: Dict[str, Any]) -> str:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20)
     cursor = conn.cursor()
     
     chat_id = chat_data.get("id")
@@ -56,7 +57,9 @@ def save_chat_session(chat_data: Dict[str, Any]) -> str:
         
     messages_str = json.dumps(chat_data.get("messages", []))
     now = datetime.utcnow().isoformat()
-    start_time = chat_data.get("start_time", now)
+    start_time = chat_data.get("start_time")
+    if not start_time:
+        start_time = now
     
     cursor.execute('''
         INSERT INTO chat_sessions (id, user_email, title, start_time, last_updated, messages)

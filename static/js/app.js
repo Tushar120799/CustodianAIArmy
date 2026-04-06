@@ -279,7 +279,7 @@ class CustodianAIApp {
             const agentCard = document.createElement('div');
             agentCard.className = 'agent-card';
             
-            const uiData = agentUIData[agent.name] || { description: "A versatile AI agent ready for any task.", image: "https://i.imgur.com/fC3C6gI.png" };
+            const uiData = agentUIData[agent.name] || { description: "A versatile AI agent ready for any task." };
 
             const capabilities = agent.capabilities.map(cap => 
                 `<span class="capability-tag">${cap.name}</span>`
@@ -290,7 +290,6 @@ class CustodianAIApp {
             
             agentCard.innerHTML = `
                 <div class="agent-card-header">
-                    <img src="${uiData.image}" alt="${agent.name} icon" class="agent-icon">
                     <div class="agent-title-group">
                         <div class="agent-title">${agent.name}</div>
                         <div class="agent-specialization">${agent.specialization || 'General'}</div>
@@ -412,11 +411,8 @@ class CustodianAIApp {
             document.getElementById('info-agent-desc').textContent = uiData.description;
             
             const iconElem = document.getElementById('info-agent-icon');
-            if (uiData.image) {
-                iconElem.src = uiData.image;
-                iconElem.style.display = 'block';
-            } else {
-                iconElem.style.display = 'none';
+            if (iconElem) {
+                iconElem.style.display = 'none'; // Ensure photo part is hidden from description
             }
             
             const usageElem = document.getElementById('info-agent-usage');
