@@ -154,6 +154,8 @@ class CustodianAIApp {
         this.agents = [];
         this.tasksCompleted = 0;
         this.urlParams = new URLSearchParams(window.location.search);
+        this.currentChatId = crypto.randomUUID ? crypto.randomUUID() : 'chat-' + Date.now();
+        this.currentMessages = [];
         this.init(); // Make init async
     }
 
@@ -432,14 +434,22 @@ class CustodianAIApp {
 
         // Clear welcome message and show chat history
         const messagesContainer = document.getElementById('chat-messages');
+        const welcomeText = `Hello! I'm ${agent.name}, your AI assistant. I specialize in ${agent.specialization || 'general tasks'}, helping you to ${uiData.description.charAt(0).toLowerCase() + uiData.description.slice(1)} How can I help you today?`;
+        
         messagesContainer.innerHTML = `
             <div class="message agent">
                 <div class="message-header">${agent.name}</div>
                 <div class="message-content">
-                    <p>Hello! I'm ${agent.name}, your AI assistant. I specialize in ${agent.specialization || 'general tasks'}, helping you to ${uiData.description.charAt(0).toLowerCase() + uiData.description.slice(1)} How can I help you today?</p>
+                    <p>${welcomeText}</p>
                 </div>
             </div>
         `;
+        
+        // Start a new chat session if switching agents
+        this.currentChatId = crypto.randomUUID ? crypto.randomUUID() : 'chat-' + Date.now();
+        this.currentMessages = [{ sender: agent.name, content: welcomeText }];
+        this.saveChatToDb();
+        
         chatInput.focus();
     }
 
@@ -459,6 +469,9 @@ class CustodianAIApp {
         // Add user message to chat
         this.addMessageToChat('user', 'You', message);
         chatInput.value = '';
+        
+        this.currentMessages.push({ sender: 'You', content: message });
+        this.saveChatToDb();
 
         // Show loading
         this.showLoading(true);
@@ -479,6 +492,8 @@ class CustodianAIApp {
             
             if (response.ok) {
                 this.addMessageToChat('agent', data.agent_response.agent_name, data.agent_response.content);
+                this.currentMessages.push({ sender: data.agent_response.agent_name, content: data.agent_response.content });
+                this.saveChatToDb();
             } else {
                 throw new Error(data.detail || 'Failed to send message');
             }
@@ -487,6 +502,31 @@ class CustodianAIApp {
             this.addMessageToChat('agent', 'System', 'Sorry, I encountered an error processing your message.');
         } finally {
             this.showLoading(false);
+        }
+    }
+    
+    async saveChatToDb() {
+        const userStr = localStorage.getItem('custodian_user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        
+        const title = this.currentMessages.length > 1 
+            ? this.currentMessages[1].content.substring(0, 30) + '...' 
+            : 'New Chat with ' + (this.currentAgent ? this.currentAgent.name : 'Agent');
+            
+        try {
+            await fetch('/api/v1/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: this.currentChatId,
+                    user_email: user.email,
+                    title: title,
+                    messages: this.currentMessages
+                })
+            });
+        } catch (e) {
+            console.error("Failed to save chat to DB", e);
         }
     }
 

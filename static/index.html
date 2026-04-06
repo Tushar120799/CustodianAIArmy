@@ -10,11 +10,57 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"><link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body style="padding-top: 80px;"> <!-- Add padding to body to offset fixed header -->
 
+    <!-- Authentication Container -->
+    <div id="auth-container" class="auth-wrapper">
+        <div class="auth-box">
+            <div class="auth-panel login-panel">
+                <i class="fas fa-robot fa-3x mb-3" style="color: var(--accent-cyan);"></i>
+                <h2 class="mb-3" style="font-family: 'Orbitron', monospace; color: var(--accent-cyan);">Login</h2>
+                <p class="mb-4">Welcome back to Custodian AI Army</p>
+                <div id="g_id_onload"
+                     data-client_id="807434225646-6dc67e8jgouhisr948ngq04qpjrnf7j9.apps.googleusercontent.com"
+                     data-context="use"
+                     data-ux_mode="popup"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-shape="rectangular"
+                     data-theme="filled_black"
+                     data-text="signin_with"
+                     data-size="large"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+            
+            <div class="auth-divider">
+                <div class="divider-line"></div>
+                <span>OR</span>
+                <div class="divider-line"></div>
+            </div>
 
-    <div class="app-container">
+            <div class="auth-panel signup-panel">
+                <i class="fas fa-user-plus fa-3x mb-3" style="color: var(--accent-purple);"></i>
+                <h2 class="mb-3" style="font-family: 'Orbitron', monospace; color: var(--accent-purple);">Sign Up</h2>
+                <p class="mb-4">Join the Custodian AI Army</p>
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-shape="rectangular"
+                     data-theme="filled_black"
+                     data-text="signup_with"
+                     data-size="large"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app-container" style="display: none;">
         <!-- Header -->
         <header class="header fixed-top">
             <div class="header-content container-fluid d-flex align-items-center justify-content-between px-3 py-2 flex-wrap">
@@ -31,19 +77,35 @@
                     </div>
                 </div>
     
-                <!-- Right side: Stats -->
-                <div class="header-stats d-flex gap-2 gap-md-3 mt-2 mt-md-0">
-                    <div class="stat-item text-center">
-                        <span class="stat-label d-block">Active Agents</span>
-                        <span class="stat-value d-block" id="active-agents">0</span>
+                <!-- Right side: Stats & Profile -->
+                <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                    <div class="header-stats d-flex gap-2 gap-md-3 d-none d-md-flex">
+                        <div class="stat-item text-center">
+                            <span class="stat-label d-block">Active Agents</span>
+                            <span class="stat-value d-block" id="active-agents">0</span>
+                        </div>
+                        <div class="stat-item text-center">
+                            <span class="stat-label d-block">Tasks Completed</span>
+                            <span class="stat-value d-block" id="tasks-completed">0</span>
+                        </div>
+                        <div class="stat-item text-center">
+                            <span class="stat-label d-block">System Status</span>
+                            <span class="stat-value status-online d-block" id="system-status">Online</span>
+                        </div>
                     </div>
-                    <div class="stat-item text-center">
-                        <span class="stat-label d-block">Tasks Completed</span>
-                        <span class="stat-value d-block" id="tasks-completed">0</span>
-                    </div>
-                    <div class="stat-item text-center">
-                        <span class="stat-label d-block">System Status</span>
-                        <span class="stat-value status-online d-block" id="system-status">Online</span>
+                    
+                    <!-- User Profile Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2" style="color: var(--accent-cyan);" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img id="user-profile-img" src="https://i.imgur.com/fC3C6gI.png" alt="Profile" class="rounded-circle" width="36" height="36" style="border: 2px solid var(--accent-cyan); object-fit: cover;">
+                            <span id="user-profile-name" class="d-none d-md-inline fw-bold">Guest</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userProfileDropdown" style="background: var(--gradient-dark); border: 1px solid var(--accent-cyan);">
+                            <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i> Edit Details</a></li>
+                            <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#chatHistoryModal"><i class="fas fa-history me-2"></i> Chat History</a></li>
+                            <li><hr class="dropdown-divider border-info"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -268,6 +330,62 @@
             </div>
         </div>
     </div>
+    <!-- Edit Profile Modal -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-info">
+                    <h5 class="modal-title text-info" id="editProfileModalLabel">Edit Profile Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-profile-form">
+                        <div class="mb-3">
+                            <label for="profileNameInput" class="form-label text-info">Name</label>
+                            <input type="text" class="form-control bg-dark text-white border-info" id="profileNameInput">
+                        </div>
+                        <div class="mb-3">
+                            <label for="profileEmailInput" class="form-label text-info">Email</label>
+                            <input type="email" class="form-control bg-dark text-white border-info" id="profileEmailInput" disabled>
+                            <div class="form-text text-muted">Email cannot be changed (Google Auth).</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-info">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-info" onclick="saveProfileDetails()" data-bs-dismiss="modal">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div class="modal fade" id="chatHistoryModal" tabindex="-1" aria-labelledby="chatHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-info">
+                    <h5 class="modal-title text-info" id="chatHistoryModalLabel">Chat History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <div id="current-chat-section" class="mb-4">
+                        <h6 class="text-accent-cyan border-bottom border-info pb-2 mb-3">Current Session</h6>
+                        <div id="current-chat-item" class="p-3 border border-info rounded mb-3" style="background: rgba(0, 229, 255, 0.1);">
+                            <!-- Current chat info -->
+                        </div>
+                    </div>
+                    
+                    <div id="past-chats-section">
+                        <h6 class="text-secondary border-bottom border-secondary pb-2 mb-3">Past Sessions</h6>
+                        <div id="chat-history-list" class="text-white d-flex flex-column gap-2">
+                            <p class="text-center text-muted my-4"><i class="fas fa-inbox fa-3x mb-3 d-block"></i>Loading chat history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!-- Floating Agent Status Panel -->
 
 
@@ -275,3 +393,158 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="/static/js/app.js?v=10"></script>
+    
+    <script>
+        // Parse JWT Token
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Failed to parse JWT", e);
+                return null;
+            }
+        }
+
+        // Global Google Auth callback
+        function handleCredentialResponse(response) {
+            const payload = parseJwt(response.credential);
+            if (!payload) return;
+
+            const user = {
+                name: payload.name,
+                email: payload.email,
+                picture: payload.picture,
+                loginTime: Date.now()
+            };
+            
+            // Save to localStorage for 20-min session
+            localStorage.setItem('custodian_user', JSON.stringify(user));
+            
+            // Hide auth container and show app
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('main-app-container').style.display = 'flex';
+            
+            updateUserProfile(user);
+        }
+
+        function updateUserProfile(user) {
+            const profileIcon = document.getElementById('user-profile-img');
+            const profileName = document.getElementById('user-profile-name');
+            const editNameInput = document.getElementById('profileNameInput');
+            const editEmailInput = document.getElementById('profileEmailInput');
+            
+            if (profileIcon && user.picture) profileIcon.src = user.picture;
+            if (profileName && user.name) profileName.textContent = user.name.split(' ')[0]; // Show first name
+            
+            if (editNameInput) editNameInput.value = user.name || '';
+            if (editEmailInput) editEmailInput.value = user.email || '';
+        }
+
+        function saveProfileDetails() {
+            const newName = document.getElementById('profileNameInput').value;
+            const userStr = localStorage.getItem('custodian_user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                user.name = newName;
+                localStorage.setItem('custodian_user', JSON.stringify(user));
+                updateUserProfile(user);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('custodian_user');
+            location.reload();
+        }
+
+        // Chat History Fetch
+        async function loadChatHistory() {
+            const userStr = localStorage.getItem('custodian_user');
+            if (!userStr) return;
+            const user = JSON.parse(userStr);
+            
+            try {
+                const response = await fetch(`/api/v1/chats?email=${encodeURIComponent(user.email)}`);
+                const data = await response.json();
+                
+                const list = document.getElementById('chat-history-list');
+                const currentItem = document.getElementById('current-chat-item');
+                list.innerHTML = '';
+                
+                if (data.chats && data.chats.length > 0) {
+                    let currentChatHtml = '<p class="text-muted">No messages in current session yet.</p>';
+                    let hasPastChats = false;
+                    
+                    data.chats.forEach(chat => {
+                        const date = new Date(chat.last_updated).toLocaleString();
+                        const messageCount = chat.messages ? chat.messages.length : 0;
+                        
+                        const chatHtml = `
+                            <div class="chat-history-card p-3 border border-secondary rounded" style="background: rgba(26, 26, 46, 0.6); cursor: pointer;" onclick="alert('Viewing chat history is coming soon!')">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="text-info">${chat.title || 'Chat Session'}</strong>
+                                    <small class="text-muted">${date}</small>
+                                </div>
+                                <div class="text-secondary small">${messageCount} messages</div>
+                            </div>
+                        `;
+                        
+                        // Check if this is the current active chat session
+                        if (window.app && window.app.currentChatId === chat.id) {
+                            currentChatHtml = `
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="text-info">${chat.title || 'Current Chat'}</strong>
+                                    <span class="badge bg-info text-dark">Active</span>
+                                </div>
+                                <div class="text-secondary small">${messageCount} messages</div>
+                            `;
+                        } else {
+                            hasPastChats = true;
+                            list.innerHTML += chatHtml;
+                        }
+                    });
+                    
+                    currentItem.innerHTML = currentChatHtml;
+                    if (!hasPastChats) {
+                        list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
+                    }
+                } else {
+                    currentItem.innerHTML = '<p class="text-muted">No messages in current session yet.</p>';
+                    list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
+                }
+            } catch (err) {
+                console.error("Failed to load chat history", err);
+            }
+        }
+
+        document.getElementById('chatHistoryModal').addEventListener('show.bs.modal', loadChatHistory);
+
+        // Session check on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const userStr = localStorage.getItem('custodian_user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                const now = Date.now();
+                const sessionDuration = 20 * 60 * 1000; // 20 minutes in ms
+                
+                if (now - user.loginTime < sessionDuration) {
+                    // Session valid - renew it
+                    user.loginTime = now; 
+                    localStorage.setItem('custodian_user', JSON.stringify(user));
+                    
+                    document.getElementById('auth-container').style.display = 'none';
+                    document.getElementById('main-app-container').style.display = 'flex';
+                    updateUserProfile(user);
+                } else {
+                    // Session expired
+                    localStorage.removeItem('custodian_user');
+                    document.getElementById('auth-container').style.display = 'flex';
+                    document.getElementById('main-app-container').style.display = 'none';
+                }
+            }
+        });
+    </script>

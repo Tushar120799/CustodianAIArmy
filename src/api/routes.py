@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 
 from src.agents.agent_manager import AgentManager
+from src.core.database import get_chats_for_user, save_chat_session
 from src.agents.base_agent import AgentMessage
 from src.core.logging_config import get_logger
 
@@ -32,6 +33,13 @@ class ChatRequest(BaseModel):
     message: str
     agent_name: Optional[str] = None
     agent_id: Optional[str] = None
+
+class ChatSessionSaveRequest(BaseModel):
+    id: Optional[str] = None
+    user_email: str
+    title: str
+    start_time: Optional[str] = None
+    messages: List[Dict[str, Any]]
 
 class CodeExecutionRequest(BaseModel):
     code: str
@@ -367,6 +375,26 @@ async def execute_code(request: CodeExecutionRequest):
     except Exception as e:
         logger.error(f"Error executing code: {str(e)}")
         return {"error": str(e), "output": "", "exit_code": -1}
+
+@router.get("/chats")
+async def get_chats(email: str):
+    """Get all chat sessions for a user"""
+    try:
+        chats = get_chats_for_user(email)
+        return {"chats": chats}
+    except Exception as e:
+        logger.error(f"Error getting chats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/chats")
+async def save_chat(request: ChatSessionSaveRequest):
+    """Save or update a chat session"""
+    try:
+        chat_id = save_chat_session(request.dict())
+        return {"status": "success", "id": chat_id}
+    except Exception as e:
+        logger.error(f"Error saving chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Debug endpoint to check agent manager state
 @router.get("/debug/agents")
