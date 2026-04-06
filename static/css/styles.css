@@ -382,6 +382,9 @@
     .chat-sidebar {
         display: none;
     }
+    .agent-info-panel {
+        display: none !important;
+    }
     .agent-select {
         display: block;
         width: 100%;
@@ -949,7 +952,7 @@ body::before {
 /* Chat Interface */
 .chat-container {
     display: flex;
-    height: 600px;
+    height: 750px;
     background: rgba(5, 5, 10, 0.7);
     border: 1px solid rgba(0, 229, 255, 0.2);
     backdrop-filter: blur(15px);
@@ -959,11 +962,28 @@ body::before {
     overflow: hidden;
 }
 
+.chat-container-desktop {
+    flex-direction: column;
+}
+
+.agents-top-section {
+    display: flex;
+    height: 375px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+@media (max-width: 900px) {
+    .agents-top-section {
+        display: none !important;
+    }
+}
+
 .chat-sidebar {
     width: 250px;
     background: rgba(10, 10, 20, 0.5);
     border-right: 1px solid rgba(0, 229, 255, 0.2);
     padding: 1rem;
+    overflow-y: auto;
 }
 
 .chat-sidebar h3 {
@@ -971,6 +991,52 @@ body::before {
     color: var(--accent-cyan);
     font-family: 'Orbitron', monospace;
     text-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.agent-info-panel {
+    width: 300px;
+    background: rgba(10, 10, 20, 0.5);
+    border-right: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: none;
+}
+
+.agent-info-panel .info-agent-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    border: 2px solid var(--accent-cyan);
+    padding: 5px;
+    background: rgba(26, 26, 46, 0.8);
+}
+
+.agent-info-panel h4 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 5px var(--accent-cyan);
+}
+
+.agent-info-panel .agent-specialization {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.agent-info-panel .agent-usage ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.agent-info-panel .agent-usage li {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    background: rgba(26, 26, 46, 0.8);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 2px solid var(--accent-blue);
+    word-break: break-word;
 }
 
 .agent-list {

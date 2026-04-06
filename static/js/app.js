@@ -16,7 +16,7 @@ const learningPathData = {
 
 // Agent UI Enhancement Data
 const agentUIData = {
-    "CommanderAI": {
+    "CustodianAI": {
         description: "Orchestrates tasks and coordinates all other AI agents to achieve mission objectives.",
         image: "https://i.imgur.com/jJtVq3A.png", // commander icon
         useCases: [
@@ -27,19 +27,99 @@ const agentUIData = {
     },
     "AnalystAI": {
         description: "Specializes in data interpretation, market trends, and statistical analysis.",
-        image: "https://i.imgur.com/sUoYyM1.png" // analyst icon
+        image: "https://i.imgur.com/sUoYyM1.png", // analyst icon
+        useCases: [
+            "\"Analyze the attached dataset and find correlations.\"",
+            "\"What are the current market trends for AI technologies?\""
+        ]
+    },
+    "DataAnalystAI": {
+        description: "Focuses on deep data processing, ETL tasks, and complex statistical modeling.",
+        image: "https://i.imgur.com/sUoYyM1.png",
+        useCases: [
+            "\"Clean and normalize this messy CSV file.\"",
+            "\"Build a predictive model based on this historical sales data.\""
+        ]
+    },
+    "MarketAnalystAI": {
+        description: "Tracks market indicators, competitor analysis, and consumer behavior.",
+        image: "https://i.imgur.com/sUoYyM1.png",
+        useCases: [
+            "\"Provide a competitive analysis for the electric vehicle market.\"",
+            "\"What are the projected growth sectors in tech for next year?\""
+        ]
     },
     "CreativeAI": {
         description: "Generates novel concepts, content, and visual designs for creative tasks.",
-        image: "https://i.imgur.com/yV2zVsm.png" // creative icon
+        image: "https://i.imgur.com/yV2zVsm.png", // creative icon
+        useCases: [
+            "\"Brainstorm 5 unique marketing campaigns for a new product.\"",
+            "\"Write a catchy slogan for an eco-friendly brand.\""
+        ]
+    },
+    "WriterAI": {
+        description: "Crafts compelling copy, articles, and long-form written content.",
+        image: "https://i.imgur.com/yV2zVsm.png",
+        useCases: [
+            "\"Draft a 500-word blog post about the benefits of remote work.\"",
+            "\"Edit this email to sound more professional and persuasive.\""
+        ]
+    },
+    "DesignerAI": {
+        description: "Suggests UI/UX improvements, color palettes, and visual design concepts.",
+        image: "https://i.imgur.com/yV2zVsm.png",
+        useCases: [
+            "\"Suggest a modern color palette for a healthcare app.\"",
+            "\"How can I improve the user flow of this checkout process?\""
+        ]
     },
     "TechnicalAI": {
         description: "Handles code generation, system architecture, and complex technical problem-solving.",
-        image: "https://i.imgur.com/O3E2V7A.png" // technical icon
+        image: "https://i.imgur.com/O3E2V7A.png", // technical icon
+        useCases: [
+            "\"Review this architecture diagram and suggest optimizations.\"",
+            "\"Explain the tradeoffs between microservices and monoliths.\""
+        ]
+    },
+    "CoderAI": {
+        description: "Specializes in writing, debugging, and refactoring code across multiple languages.",
+        image: "https://i.imgur.com/O3E2V7A.png",
+        useCases: [
+            "\"Write a Python script to scrape product prices from a website.\"",
+            "\"Find the bug in this React component that's causing a memory leak.\""
+        ]
+    },
+    "ArchitectAI": {
+        description: "Designs scalable system architectures and evaluates infrastructure choices.",
+        image: "https://i.imgur.com/O3E2V7A.png",
+        useCases: [
+            "\"Design a highly available database schema for a social network.\"",
+            "\"What is the best cloud architecture for a real-time streaming app?\""
+        ]
     },
     "ResearchAI": {
         description: "Conducts in-depth research, fact-checking, and information synthesis.",
-        image: "https://i.imgur.com/rK4fJpP.png" // research icon
+        image: "https://i.imgur.com/rK4fJpP.png", // research icon
+        useCases: [
+            "\"Gather comprehensive research on renewable energy policies in Europe.\"",
+            "\"Summarize the key findings of this 50-page academic paper.\""
+        ]
+    },
+    "FactCheckerAI": {
+        description: "Verifies claims, cross-references sources, and ensures informational accuracy.",
+        image: "https://i.imgur.com/rK4fJpP.png",
+        useCases: [
+            "\"Fact-check the claims made in this news article.\"",
+            "\"Find credible sources to support this historical statement.\""
+        ]
+    },
+    "TrendAnalystAI": {
+        description: "Identifies emerging patterns and forecasts future trends in various domains.",
+        image: "https://i.imgur.com/rK4fJpP.png",
+        useCases: [
+            "\"What are the emerging trends in remote team collaboration tools?\"",
+            "\"Analyze social media sentiment to forecast next season's fashion trends.\""
+        ]
     }
 };
 
@@ -130,8 +210,7 @@ class CustodianAIApp {
         try {
             // Simplified data loading for the new structure
             await Promise.all([
-                this.loadAgents(),
-                this.loadChatAgents()
+                this.loadAgents()
             ]);
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -148,6 +227,9 @@ class CustodianAIApp {
             this.updateAgentsGrid(data.agents); // This now populates the homepage
             this.updatePreferredAgentSelect(data.agents);
             this.updateDashboardAgentList(data.agents);
+            
+            // Update modal agent list with all agents
+            this.updateModalAgentList(data.agents);
 
             // Update the active agents count in the header
             document.getElementById('active-agents').textContent = data.agents.length;
@@ -183,22 +265,6 @@ class CustodianAIApp {
         // Add Language Paths
         grid.innerHTML += '<h3>Available Learning Paths</h3>';
         learningPathData.paths.forEach(path => grid.appendChild(createPathCard(path)));
-    }
-
-    async loadChatAgents() {
-        try {
-            // Use the /agents endpoint and filter for main agents on frontend
-            const response = await fetch('/api/v1/agents');
-            const data = await response.json();
-            
-            // Filter for main agents
-            const mainAgents = data.agents.filter(agent => agent.type.toLowerCase() === 'main');
-            
-            this.updateChatAgentList(mainAgents);
-            this.updateModalAgentList(mainAgents);
-        } catch (error) {
-            console.error('Error loading chat agents:', error);
-        }
     }
 
     updateAgentsGrid(agents) {
@@ -248,78 +314,21 @@ class CustodianAIApp {
         if (!list) return;
 
         list.innerHTML = '';
-        const mainAgents = agents.filter(agent => agent.type.toLowerCase() === 'main');
 
-        mainAgents.forEach(agent => {
-            const agentItem = document.createElement('div');
-            agentItem.className = 'agent-list-item';
-            agentItem.dataset.agentId = agent.agent_id;
-
-            agentItem.innerHTML = `
-                <div class="agent-name">${agent.name}</div>
-                <div class="agent-specialization">${agent.specialization || 'General'}</div>
-            `;
-
-            agentItem.addEventListener('click', () => {
-                // Highlight this item
-                list.querySelectorAll('.agent-list-item').forEach(item => item.classList.remove('active'));
-                agentItem.classList.add('active');
-
-                // Show details and select for chat
-                this.showAgentDetails(agent);
-                this.selectChatAgent(agent);
-            });
-
-            list.appendChild(agentItem);
-        });
-    }
-
-    showAgentDetails(agent) {
-        const detailView = document.getElementById('agent-detail-view');
-        if (!detailView) return;
-
-        const uiData = agentUIData[agent.name] || { description: "A versatile AI agent ready for any task.", useCases: ["\"Ask me anything!\""] };
-        const useCasesHtml = uiData.useCases.map(uc => `<li><code>${uc}</code></li>`).join('');
-
-        detailView.innerHTML = `
-            <div class="agent-card-header">
-                <img src="${uiData.image}" alt="${agent.name} icon" class="agent-icon">
-                <div class="agent-title-group">
-                    <div class="agent-title">${agent.name}</div>
-                    <div class="agent-specialization">${agent.specialization || 'General'}</div>
-                </div>
-            </div>
-            <div class="agent-header">
-                <p class="agent-description">${uiData.description}</p>
-            </div>
-            <div class="agent-use-cases">
-                <h4>Use Case Examples:</h4>
-                <ul>${useCasesHtml}</ul>
-            </div>
-        `;
-    }
-
-    updateChatAgentList(agents) {
-        const list = document.getElementById('chat-agent-list');
-        if (!list) return;
-
-        list.innerHTML = '';
-        
         agents.forEach(agent => {
             const agentItem = document.createElement('div');
             agentItem.className = 'agent-list-item';
             agentItem.dataset.agentId = agent.agent_id;
-            agentItem.dataset.agentName = agent.name;
-            
+
             agentItem.innerHTML = `
                 <div class="agent-name">${agent.name}</div>
                 <div class="agent-specialization">${agent.specialization || 'General'}</div>
             `;
-            
+
             agentItem.addEventListener('click', () => {
                 this.selectChatAgent(agent);
             });
-            
+
             list.appendChild(agentItem);
         });
     }
@@ -388,12 +397,47 @@ class CustodianAIApp {
         changeAgentBtn.disabled = false;
         chatInput.placeholder = `Type your message to ${agent.name}...`;
         
+        // Fetch agent details
+        const uiData = agentUIData[agent.name] || { description: "A versatile AI assistant ready for any task.", useCases: [] };
+        
+        // Populate info panel
+        const infoPanel = document.getElementById('agent-info-panel');
+        if (infoPanel) {
+            infoPanel.style.display = 'block';
+            
+            document.getElementById('info-agent-name').textContent = agent.name;
+            document.getElementById('info-agent-spec').textContent = agent.specialization || 'General';
+            document.getElementById('info-agent-desc').textContent = uiData.description;
+            
+            const iconElem = document.getElementById('info-agent-icon');
+            if (uiData.image) {
+                iconElem.src = uiData.image;
+                iconElem.style.display = 'block';
+            } else {
+                iconElem.style.display = 'none';
+            }
+            
+            const usageElem = document.getElementById('info-agent-usage');
+            if (uiData.useCases && uiData.useCases.length > 0) {
+                let usageHtml = `<strong>Example use cases:</strong><ul class="mt-2">`;
+                uiData.useCases.forEach(uc => {
+                    usageHtml += `<li><code>${uc}</code></li>`;
+                });
+                usageHtml += `</ul>`;
+                usageElem.innerHTML = usageHtml;
+            } else {
+                usageElem.innerHTML = '';
+            }
+        }
+
         // Clear welcome message and show chat history
         const messagesContainer = document.getElementById('chat-messages');
         messagesContainer.innerHTML = `
             <div class="message agent">
                 <div class="message-header">${agent.name}</div>
-                <div class="message-content">Hello! I'm ${agent.name}, your ${agent.specialization || 'general'} AI assistant. How can I help you today?</div>
+                <div class="message-content">
+                    <p>Hello! I'm ${agent.name}, your AI assistant. I specialize in ${agent.specialization || 'general tasks'}, helping you to ${uiData.description.charAt(0).toLowerCase() + uiData.description.slice(1)} How can I help you today?</p>
+                </div>
             </div>
         `;
         chatInput.focus();
@@ -635,19 +679,6 @@ class CustodianAIApp {
         // Load section-specific data
         if (sectionName === 'learn') {
             this.updateLearningPathsGrid();
-        } else if (sectionName === 'dashboard') {
-            // Move chat window into the dashboard
-            const chatWindowContainer = document.getElementById('dashboard-chat-window'); // The target container on the dashboard
-            const chatMain = document.getElementById('chat-main'); // The main chat window element
-            if (chatWindowContainer && chatMain) {
-                chatWindowContainer.innerHTML = ''; // Clear any previous content
-                chatWindowContainer.appendChild(chatMain); // Move only the chat window
-                chatMain.style.display = 'flex'; // Ensure it's visible
-            }
-        } else if (sectionName === 'chat') {
-            await this.loadChatAgents();
-            const changeAgentBtn = document.getElementById('change-agent-btn');
-            if (changeAgentBtn) changeAgentBtn.disabled = false;
         }
         // Other sections can have their data loading logic here
     }

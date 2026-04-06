@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custodian AI Army - Command Center</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=8">
     <link rel="stylesheet" href="/static/css/custom.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -27,7 +27,7 @@
                         <a href="/?section=dashboard" class="glowing-robot-link">
                             <i class="fas fa-robot fa-2x"></i>
                         </a>
-                        <h1 class="m-0 h5">Commander AI</h1>
+                        <h1 class="m-0 h5">Custodian AI</h1>
                     </div>
                 </div>
     
@@ -61,7 +61,7 @@
                   </div>
                   <div class="offcanvas-body p-0">
                     <nav class="nav flex-column nav-menu" id="nav-menu">
-                        <a class="nav-link nav-item" data-section="dashboard" href="/?section=dashboard"><i class="fas fa-brain me-2"></i>Commander AI</a>
+                        <a class="nav-link nav-item" data-section="dashboard" href="/?section=dashboard"><i class="fas fa-brain me-2"></i>Custodian AI</a>
                         <a class="nav-link nav-item" data-section="learn" href="/?section=learn"><i class="fas fa-graduation-cap me-2"></i>Learn with AI</a>
                         <a class="nav-link nav-item" data-section="portfolio" href="/?section=portfolio"><i class="fab fa-github me-2"></i>Portfolio Builder</a>
                         <a class="nav-link nav-item" data-section="build" href="/?section=build"><i class="fas fa-cubes me-2"></i>Build Your Product</a>
@@ -76,27 +76,52 @@
                 <!-- Dashboard Section -->
                 <section id="dashboard" class="content-section">
                     <div class="section-header">
-                        <h2>Commander AI Dashboard</h2>
-                        <p>Select an agent from the list to view details and start a conversation.</p>
+                        <h2>Custodian AI Dashboard</h2>
+                        <p>Select an agent from the list to start a conversation.</p>
                     </div>
-                    <div class="dashboard-container">
-                        <!-- Left Sidebar for Agent List -->
-                        <div class="dashboard-sidebar">
-                            <h3>Available Agents</h3>
-                            <div class="agent-list" id="dashboard-agent-list">
-                                <!-- Agent list will be populated here -->
-                            </div>
-                        </div>
-                        <!-- Right side for details and chat -->
-                        <div class="dashboard-main">
-                            <div id="agent-detail-view" class="agent-detail-view">
-                                <!-- Agent details will be populated here -->
-                                <div class="placeholder-content">
-                                    <i class="fas fa-hand-pointer fa-2x"></i>
-                                    <p>Select an agent to see their details and use cases.</p>
+                    <div class="chat-container chat-container-desktop">
+                        <!-- Top Section for Agents and Info -->
+                        <div class="agents-top-section d-flex">
+                            <!-- Agent List -->
+                            <div class="chat-sidebar" style="width: 50%;">
+                                <h3>Available Agents</h3>
+                                <div class="agent-list" id="dashboard-agent-list">
+                                    <!-- Agent list will be populated here -->
                                 </div>
                             </div>
-                            <div id="dashboard-chat-window"></div>
+                            <!-- Agent Info -->
+                            <div class="agent-info-panel" id="agent-info-panel" style="display: none; width: 50%;">
+                                <h3 style="margin-bottom: 1rem; color: var(--accent-cyan); font-family: 'Orbitron', monospace;">Agent Details</h3>
+                                <div class="agent-info-content">
+                                    <img id="info-agent-icon" src="" alt="" class="info-agent-icon" style="display: none; width: 60px; height: 60px; margin-bottom: 10px;">
+                                    <h4 id="info-agent-name" class="text-info mt-2">Agent Name</h4>
+                                    <div class="agent-specialization text-muted mb-3" id="info-agent-spec">Specialization</div>
+                                    <p id="info-agent-desc" class="agent-description">Description</p>
+                                    <div id="info-agent-usage" class="agent-usage mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Chat Window -->
+                        <div class="chat-main" id="chat-main" style="flex: 1; min-height: 0;">
+                            <div class="chat-header">
+                                <span id="current-agent">Select an agent to start chatting</span>
+                            </div>
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="welcome-message">
+                                    <i class="fas fa-robot"></i>
+                                    <p>Welcome to the Custodian AI Army!</p>
+                                    <p>Select an agent to begin your conversation.</p>
+                                </div>
+                            </div>
+                            <div class="chat-input-container">
+                                <button id="change-agent-btn" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#agentSelectModal" disabled>
+                                    <i class="fas fa-users"></i>
+                                </button>
+                                <textarea id="chat-input" placeholder="Type your message..." disabled rows="1"></textarea>
+                                <button id="send-btn" onclick="sendMessage()" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -112,53 +137,6 @@
                     </div>
                 </section>
 
-                <!-- Chat Section -->
-                <section id="chat" class="content-section" style="display: none;">
-                    <div class="section-header chat-header-mobile">
-                        <h2>AI Chat Center</h2>
-                        <div class="quick-actions-mobile d-flex justify-content-around w-100 mt-2">
-                            <button class="action-btn" onclick="showSection('dashboard')">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </button>
-                            <button class="action-btn" onclick="showSection('agents')">
-                                <i class="fas fa-users"></i> Army
-                            </button>
-                            <button class="action-btn" onclick="showSection('analytics')">
-                                <i class="fas fa-chart-line"></i> Analytics
-                            </button>
-                        </div>
-                    </div>
-                    <div class="chat-container">
-                        <div class="chat-sidebar">
-                            <h3>Available Agents</h3>
-                            <div class="agent-list" id="chat-agent-list">
-                                <!-- Agent list will be populated here -->
-                            </div>
-                        </div>
-                        <div class="chat-main" id="chat-main">
-                            <div class="chat-header">
-                                <span id="current-agent">Select an agent to start chatting</span>
-                            </div>
-                            <div class="chat-messages" id="chat-messages">
-                                <div class="welcome-message">
-                                    <i class="fas fa-robot"></i>
-                                    <p>Welcome to the Custodian AI Army!</p>
-                                    <p>Select an agent to begin your conversation.</p>
-                                    <p class="mobile-hint">Use the dropdown below to select an agent.</p>
-                                </div>
-                            </div>
-                            <div class="chat-input-container">
-                                <button id="change-agent-btn" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#agentSelectModal" disabled>
-                                    <i class="fas fa-users"></i>
-                                </button>
-                                <textarea id="chat-input" placeholder="Type your message..." disabled rows="1"></textarea>
-                                <button id="send-btn" onclick="sendMessage()" disabled>
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 <!-- Tasks Section -->
                 <section id="tasks" class="content-section">
@@ -296,4 +274,4 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=10"></script>

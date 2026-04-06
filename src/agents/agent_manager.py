@@ -31,7 +31,7 @@ class AgentManager:
         
         # Main Coordinator Agent
         coordinator = GeminiAgent(
-            name="CommanderAI",
+            name="CustodianAI",
             specialization="coordinator",
             agent_type=AgentType.MAIN
         )
