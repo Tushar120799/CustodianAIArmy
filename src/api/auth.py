@@ -121,6 +121,10 @@ async def google_login():
     Initiate Google OAuth flow.
     Redirects user to Google's OAuth consent screen.
     """
+    # Debug: print the credentials being used
+    print(f"DEBUG: GOOGLE_CLIENT_ID = {settings.GOOGLE_CLIENT_ID}")
+    print(f"DEBUG: GOOGLE_REDIRECT_URI = {settings.GOOGLE_REDIRECT_URI}")
+    
     # Build Google OAuth URL
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
@@ -168,7 +172,11 @@ async def google_callback(request: Request, code: str = None, error: str = None)
             )
             
             if token_response.status_code != 200:
-                raise HTTPException(status_code=400, detail="Failed to exchange code for token")
+                # Log the error response from Google for debugging
+                error_detail = token_response.text
+                print(f"DEBUG: Token exchange failed with status {token_response.status_code}")
+                print(f"DEBUG: Response body: {error_detail}")
+                raise HTTPException(status_code=400, detail=f"Failed to exchange code for token: {error_detail}")
             
             token_data = token_response.json()
             access_token = token_data.get("access_token")
