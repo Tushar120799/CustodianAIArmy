@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 import os
 
 # Use /tmp for serverless environments (Vercel, AWS Lambda, etc.)
-# For local development, use a local directory
+# Vercel only allows writing to /tmp directory
 DB_PATH = os.getenv('DATABASE_PATH', '/tmp/chat_history.db')
 
 def init_db():
