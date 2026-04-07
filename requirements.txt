@@ -8,6 +8,9 @@ python-dotenv>=1.0.0
 # HTTP client
 httpx>=0.24.0
 
+# JWT handling
+pyjwt>=2.8.0
+
 # Web and file handling
 jinja2>=3.1.0
 python-multipart>=0.0.6

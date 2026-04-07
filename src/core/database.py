@@ -2,7 +2,7 @@ import sqlite3
 import json
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Iterator
 import os
 
 # Use /tmp for serverless environments (Vercel, AWS Lambda, etc.)
@@ -46,6 +46,15 @@ def init_db():
     except Exception as e:
         print(f"Unexpected database initialization error: {e}")
         return False
+
+def get_db() -> sqlite3.Connection:
+    """
+    Get a database connection.
+    For FastAPI dependency injection.
+    """
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def get_chats_for_user(email: str) -> List[Dict[str, Any]]:
     conn = sqlite3.connect(DB_PATH, timeout=20)

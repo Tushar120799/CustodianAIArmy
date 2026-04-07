@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"><link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body style="padding-top: 80px;"> <!-- Add padding to body to offset fixed header -->
 
@@ -23,26 +22,13 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="g_id_onload"
-                         data-client_id="807434225646-6dc67e8jgouhisr948ngq04qpjrnf7j9.apps.googleusercontent.com"
-                         data-context="use"
-                         data-ux_mode="popup"
-                         data-callback="handleCredentialResponse"
-                         data-auto_prompt="false">
-                    </div>
-
-                    <p class="text-center mb-4">Sign in to save your chat history, track your progress and unlock more features.</p>
+                    <p class="text-center mb-4">Sign in with Google to save your chat history, track your progress and unlock more features.</p>
                     <p class="text-center text-muted mb-4">You can also continue as a guest, but your history won't be saved.</p>
 
                     <div class="d-flex flex-column gap-3">
-                        <div class="g_id_signin d-flex justify-content-center"
-                             data-type="standard"
-                             data-shape="rectangular"
-                             data-theme="filled_black"
-                             data-text="continue_with"
-                             data-size="large"
-                             data-logo_alignment="left">
-                        </div>
+                        <a href="/api/v1/auth/google" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fab fa-google me-2"></i> Sign in with Google
+                        </a>
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-user-secret me-2"></i> Continue as Guest
                         </button>
@@ -440,25 +426,18 @@
             }
         }
 
-        // Global Google Auth callback
-        function handleCredentialResponse(response) {
-            const payload = parseJwt(response.credential);
-            if (!payload) return;
-
-            const user = {
-                name: payload.name,
-                email: payload.email,
-                picture: payload.picture,
-                loginTime: Date.now()
-            };
-            
-            // Save to localStorage for 20-min session
-            localStorage.setItem('custodian_user', JSON.stringify(user));
-            
-            // Hide modal
-            bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
-            
-            updateUserProfile(user);
+        // Check auth status on page load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/v1/auth/status');
+                const data = await response.json();
+                
+                if (data.authenticated && data.user) {
+                    updateUserProfile(data.user);
+                }
+            } catch (err) {
+                console.error("Failed to check auth status", err);
+            }
         }
 
         function updateUserProfile(user) {
@@ -485,9 +464,15 @@
             }
         }
 
-        function logout() {
-            localStorage.removeItem('custodian_user');
-            location.reload();
+        async function logout() {
+            try {
+                await fetch('/api/v1/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error("Logout error", err);
+            } finally {
+                localStorage.removeItem('custodian_user');
+                location.reload();
+            }
         }
 
         // Chat History Fetch
@@ -561,7 +546,10 @@
         }
 
         // Session check on page load
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication status from backend
+            await checkAuthStatus();
+            
             const userStr = localStorage.getItem('custodian_user');
             if (userStr) {
                 const user = JSON.parse(userStr);
@@ -590,3 +578,16 @@
             }
         });
     </script>
+
+</file_content>
+<task_progress>
+- [x] Analyze current routes.py implementation
+- [x] Analyze current frontend JavaScript implementation
+- [x] Analyze current HTML structure and authentication flow
+- [x] Review Vercel configuration
+- [x] Review environment variables
+- [x] Create backend Google OAuth authentication routes
+- [x] Update frontend to use backend authentication instead of Vercel
+- [ ] Test the authentication flow
+</task_progress>
+</write_to_file>

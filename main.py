@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import os
 
 from src.api.routes import router as api_router
+from src.api.auth import router as auth_router
 from src.core.config import settings
 from src.core.logging_config import setup_logging
 
@@ -40,6 +41,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(auth_router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")

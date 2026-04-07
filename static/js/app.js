@@ -759,9 +759,61 @@ window.sendMessage = function() {
     }
 };
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+// Authentication functions
+window.updateUserProfile = function(user) {
+    const profileIcon = document.getElementById('user-profile-img');
+    const profileName = document.getElementById('user-profile-name');
+    const editNameInput = document.getElementById('profileNameInput');
+    const editEmailInput = document.getElementById('profileEmailInput');
+    
+    if (profileIcon && user.picture) profileIcon.src = user.picture;
+    if (profileName && user.name) profileName.textContent = user.name.split(' ')[0]; // Show first name
+    
+    if (editNameInput) editNameInput.value = user.name || '';
+    if (editEmailInput) editEmailInput.value = user.email || '';
+    
+    // Save to localStorage for session persistence
+    localStorage.setItem('custodian_user', JSON.stringify(user));
+};
+
+window.saveProfileDetails = async function() {
+    const newName = document.getElementById('profileNameInput').value;
+    const userStr = localStorage.getItem('custodian_user');
+    if (userStr) {
+        const user = JSON.parse(userStr);
+        user.name = newName;
+        localStorage.setItem('custodian_user', JSON.stringify(user));
+        updateUserProfile(user);
+    }
+};
+
+window.logout = async function() {
+    try {
+        await fetch('/api/v1/auth/logout', { method: 'POST' });
+    } catch (err) {
+        console.error("Logout error", err);
+    } finally {
+        localStorage.removeItem('custodian_user');
+        location.reload();
+    }
+};
+
+// Check authentication status on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize the app
     window.app = new CustodianAIApp();
+    
+    // Check authentication status from backend
+    try {
+        const response = await fetch('/api/v1/auth/status');
+        const data = await response.json();
+        
+        if (data.authenticated && data.user) {
+            updateUserProfile(data.user);
+        }
+    } catch (err) {
+        console.error("Failed to check auth status", err);
+    }
 });
 
 // Add some futuristic visual effects
