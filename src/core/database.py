@@ -3,25 +3,31 @@ import json
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+import os
 
-DB_PATH = "chat_history.db"
+DB_PATH = os.getenv('DATABASE_PATH', '/tmp/chat_history.db')
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH, timeout=20)
-    conn.execute("PRAGMA journal_mode=WAL")
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS chat_sessions (
-            id TEXT PRIMARY KEY,
-            user_email TEXT NOT NULL,
-            title TEXT NOT NULL,
-            start_time TEXT NOT NULL,
-            last_updated TEXT NOT NULL,
-            messages TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        conn.execute("PRAGMA journal_mode=WAL")
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_sessions (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                title TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                last_updated TEXT NOT NULL,
+                messages TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.OperationalError as e:
+        print(f"Database initialization error: {e}")
+        return False
 
 def get_chats_for_user(email: str) -> List[Dict[str, Any]]:
     conn = sqlite3.connect(DB_PATH, timeout=20)
@@ -82,4 +88,7 @@ def save_chat_session(chat_data: Dict[str, Any]) -> str:
     return chat_id
 
 # Initialize the database when this module is loaded
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"Failed to initialize database: {e}")
