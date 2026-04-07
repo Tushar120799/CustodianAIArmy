@@ -108,11 +108,7 @@ def get_user_from_session(session_id: str) -> Optional[User]:
     session = sessions[session_id]
     session["last_activity"] = datetime.utcnow()
     
-    # Check session expiration (20 minutes)
-    if datetime.utcnow() - session["created_at"] > timedelta(minutes=20):
-        del sessions[session_id]
-        return None
-    
+    # No session expiration - persistent until logout
     return User(**session["user"])
 
 @router.get("/google")
@@ -212,7 +208,7 @@ async def google_callback(request: Request, code: str = None, error: str = None)
             response.set_cookie(
                 key="session_id",
                 value=session_id,
-                max_age=20 * 60,  # 20 minutes
+                max_age=60 * 60 * 24 * 365,  # 1 year (persistent until logout)
                 httponly=True,
                 samesite="lax",
                 secure=False  # Set to True in production with HTTPS
@@ -222,7 +218,7 @@ async def google_callback(request: Request, code: str = None, error: str = None)
             response.set_cookie(
                 key="access_token",
                 value=jwt_token,
-                max_age=20 * 60,
+                max_age=60 * 60 * 24 * 365,  # 1 year
                 httponly=True,
                 samesite="lax",
                 secure=False
@@ -349,4 +345,262 @@ async def get_current_user(
     return JSONResponse(
         status_code=200,
         content={"user": user.dict()}
+    )
+
+@router.get("/user/chats")
+async def get_user_chats(
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> JSONResponse:
+    """
+    Get all chat sessions for the authenticated user.
+    
+    Args:
+        session_id: Session cookie
+        access_token: JWT token cookie
+        
+    Returns:
+        JSON response with user's chat sessions
+    """
+    user = None
+    
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+    
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Get chats for this user
+    from src.core.database import get_chats_for_user
+    chats = get_chats_for_user(user.email)
+    
+    return JSONResponse(
+        status_code=200,
+        content={"chats": chats}
+    )
+
+@router.post("/user/chats")
+async def save_user_chat(
+    request: ChatSessionSaveRequest,
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> JSONResponse:
+    """
+    Save or update a chat session for the authenticated user.
+    
+    Args:
+        request: Chat session data
+        session_id: Session cookie
+        access_token: JWT token cookie
+        
+    Returns:
+        JSON response with saved chat ID
+    """
+    user = None
+    
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+    
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Override the email in the request with the authenticated user's email
+    chat_data = request.dict()
+    chat_data["user_email"] = user.email
+    
+    from src.core.database import save_chat_session
+    chat_id = save_chat_session(chat_data)
+    
+    return JSONResponse(
+        status_code=200,
+        content={"status": "success", "id": chat_id}
+    )
+
+@router.delete("/user/chats/{chat_id}")
+async def delete_user_chat(
+    chat_id: str,
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> JSONResponse:
+    """
+    Delete a chat session for the authenticated user.
+    
+    Args:
+        chat_id: ID of chat to delete
+        session_id: Session cookie
+        access_token: JWT token cookie
+        
+    Returns:
+        JSON response with deletion status
+    """
+    user = None
+    
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+    
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Delete chat from database (only if it belongs to this user)
+    import sqlite3
+    from src.core.database import DB_PATH
+    
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        
+        # First verify ownership
+        cursor.execute(
+            "SELECT id FROM chat_sessions WHERE id = ? AND user_email = ?",
+            (chat_id, user.email)
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Chat not found or access denied")
+        
+        cursor.execute("DELETE FROM chat_sessions WHERE id = ?", (chat_id,))
+        conn.commit()
+        conn.close()
+        
+        return JSONResponse(
+            status_code=200,
+            content={"status": "success", "message": "Chat deleted"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/user/settings")
+async def get_user_settings(
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> JSONResponse:
+    """
+    Get user settings (placeholder for future implementation).
+    
+    Args:
+        session_id: Session cookie
+        access_token: JWT token cookie
+        
+    Returns:
+        JSON response with user settings
+    """
+    user = None
+    
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+    
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Placeholder: return default settings
+    # In the future, this could fetch from a database
+    return JSONResponse(
+        status_code=200,
+        content={
+            "settings": {
+                "theme": "light",
+                "notifications": True,
+                "language": "en"
+            }
+        }
+    )
+
+@router.put("/user/settings")
+async def update_user_settings(
+    settings_data: Dict[str, Any],
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> JSONResponse:
+    """
+    Update user settings (placeholder for future implementation).
+    
+    Args:
+        settings_data: New settings data
+        session_id: Session cookie
+        access_token: JWT token cookie
+        
+    Returns:
+        JSON response with updated settings
+    """
+    user = None
+    
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+    
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Placeholder: in the future, save to database
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Settings updated",
+            "settings": settings_data
+        }
     )

@@ -18,7 +18,7 @@ const learningPathData = {
 const agentUIData = {
     "CustodianAI": {
         description: "Orchestrates tasks and coordinates all other AI agents to achieve mission objectives.",
-        image: "https://i.imgur.com/jJtVq3A.png", // commander icon
+        image: "https://i.imgur.com/jJtVq3A.png",
         useCases: [
             "\"Summarize the status of all active agents.\"",
             "\"Assign a research task about market trends to the best agent.\"",
@@ -27,7 +27,7 @@ const agentUIData = {
     },
     "AnalystAI": {
         description: "Specializes in data interpretation, market trends, and statistical analysis.",
-        image: "https://i.imgur.com/sUoYyM1.png", // analyst icon
+        image: "https://i.imgur.com/sUoYyM1.png",
         useCases: [
             "\"Analyze the attached dataset and find correlations.\"",
             "\"What are the current market trends for AI technologies?\""
@@ -51,7 +51,7 @@ const agentUIData = {
     },
     "CreativeAI": {
         description: "Generates novel concepts, content, and visual designs for creative tasks.",
-        image: "https://i.imgur.com/yV2zVsm.png", // creative icon
+        image: "https://i.imgur.com/yV2zVsm.png",
         useCases: [
             "\"Brainstorm 5 unique marketing campaigns for a new product.\"",
             "\"Write a catchy slogan for an eco-friendly brand.\""
@@ -75,7 +75,7 @@ const agentUIData = {
     },
     "TechnicalAI": {
         description: "Handles code generation, system architecture, and complex technical problem-solving.",
-        image: "https://i.imgur.com/O3E2V7A.png", // technical icon
+        image: "https://i.imgur.com/O3E2V7A.png",
         useCases: [
             "\"Review this architecture diagram and suggest optimizations.\"",
             "\"Explain the tradeoffs between microservices and monoliths.\""
@@ -156,18 +156,16 @@ class CustodianAIApp {
         this.urlParams = new URLSearchParams(window.location.search);
         this.currentChatId = crypto.randomUUID ? crypto.randomUUID() : 'chat-' + Date.now();
         this.currentMessages = [];
-        this.init(); // Make init async
+        this.init();
     }
 
     async init() {
         this.setupEventListeners();
         await this.loadInitialData();
 
-        // URL-based routing
         const section = this.urlParams.get('section') || 'dashboard';
         await this.showSection(section);
 
-        // Handle direct-to-chat agent selection
         const agentId = this.urlParams.get('agent_id');
         if (section === 'chat' && agentId) {
             const agentToSelect = this.agents.find(a => a.agent_id === agentId);
@@ -177,7 +175,6 @@ class CustodianAIApp {
     }
 
     setupEventListeners() {
-        // Chat input
         const chatInput = document.getElementById('chat-input');
         if (chatInput) {
             chatInput.addEventListener('keypress', (e) => {
@@ -186,7 +183,6 @@ class CustodianAIApp {
                     this.sendMessage();
                 }
             });
-            // Auto-resize textarea
             chatInput.addEventListener('input', () => {
                 chatInput.style.height = 'auto';
                 chatInput.style.height = (chatInput.scrollHeight) + 'px';
@@ -198,7 +194,6 @@ class CustodianAIApp {
             this.agentSelectModal = new bootstrap.Modal(agentModal);
         }
 
-        // Task form
         const taskForm = document.getElementById('task-form');
         if (taskForm) {
             taskForm.addEventListener('submit', (e) => {
@@ -210,7 +205,6 @@ class CustodianAIApp {
 
     async loadInitialData() {
         try {
-            // Simplified data loading for the new structure
             await Promise.all([
                 this.loadAgents()
             ]);
@@ -226,14 +220,11 @@ class CustodianAIApp {
             const data = await response.json();
             
             this.agents = data.agents;
-            this.updateAgentsGrid(data.agents); // This now populates the homepage
+            this.updateAgentsGrid(data.agents);
             this.updatePreferredAgentSelect(data.agents);
             this.updateDashboardAgentList(data.agents);
-            
-            // Update modal agent list with all agents
             this.updateModalAgentList(data.agents);
 
-            // Update the active agents count in the header
             document.getElementById('active-agents').textContent = data.agents.length;
         } catch (error) {
             console.error('Error loading agents:', error);
@@ -248,7 +239,7 @@ class CustodianAIApp {
 
         const createPathCard = (path) => {
             const card = document.createElement('div');
-            card.className = 'learning-path-card'; // Use a new class for styling
+            card.className = 'learning-path-card';
             card.innerHTML = `
                 <div class="path-icon">
                     <i class="${path.icon} fa-2x"></i>
@@ -264,14 +255,13 @@ class CustodianAIApp {
             return card;
         };
 
-        // Add Language Paths
         grid.innerHTML += '<h3>Available Learning Paths</h3>';
         learningPathData.paths.forEach(path => grid.appendChild(createPathCard(path)));
     }
 
     updateAgentsGrid(agents) {
         const grid = document.getElementById('agents-grid');
-        if (!grid) return; // This grid is no longer used on the dashboard, but we keep the function for now.
+        if (!grid) return;
 
         grid.innerHTML = '';
         
@@ -285,7 +275,6 @@ class CustodianAIApp {
                 `<span class="capability-tag">${cap.name}</span>`
             ).join('');
 
-            // Direct-to-chat button
             const chatUrl = `/?section=chat&agent_id=${agent.agent_id}`;
             
             agentCard.innerHTML = `
@@ -342,14 +331,13 @@ class CustodianAIApp {
     
         agents.forEach(agent => {
             const agentItem = document.createElement('div');
-            agentItem.className = 'agent-list-item modal-agent-item'; // Use same styling
+            agentItem.className = 'agent-list-item modal-agent-item';
             agentItem.innerHTML = `
                 <div class="agent-name">${agent.name}</div>
                 <div class="agent-specialization">${agent.specialization || 'General'}</div>
             `;
             agentItem.addEventListener('click', () => {
                 this.selectChatAgent(agent);
-                // Hide modal and focus input
                 if (this.agentSelectModal) {
                     this.agentSelectModal.hide();
                 }
@@ -362,7 +350,6 @@ class CustodianAIApp {
         const select = document.getElementById('preferred-agent');
         if (!select) return;
 
-        // Clear existing options except the first one
         while (select.children.length > 1) {
             select.removeChild(select.lastChild);
         }
@@ -377,18 +364,15 @@ class CustodianAIApp {
 
     selectChatAgent(agent) {
         if (!agent) return;
-        // Update UI
         document.querySelectorAll('.agent-list-item').forEach(item => {
             if(item.dataset.agentId === agent.agent_id) item.classList.add('active');
             else item.classList.remove('active');
         });
         
-        // Update current agent
         this.currentAgent = agent;
         document.getElementById('current-agent').textContent = 
             `Chatting with ${agent.name} (${agent.specialization || 'General'})`;
         
-        // Enable chat input
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-btn');
         const changeAgentBtn = document.getElementById('change-agent-btn');
@@ -398,10 +382,8 @@ class CustodianAIApp {
         changeAgentBtn.disabled = false;
         chatInput.placeholder = `Type your message to ${agent.name}...`;
         
-        // Fetch agent details
         const uiData = agentUIData[agent.name] || { description: "A versatile AI assistant ready for any task.", useCases: [] };
         
-        // Populate info panel
         const infoPanel = document.getElementById('agent-info-panel');
         if (infoPanel) {
             infoPanel.style.display = 'block';
@@ -412,7 +394,7 @@ class CustodianAIApp {
             
             const iconElem = document.getElementById('info-agent-icon');
             if (iconElem) {
-                iconElem.style.display = 'none'; // Ensure photo part is hidden from description
+                iconElem.style.display = 'none';
             }
             
             const usageElem = document.getElementById('info-agent-usage');
@@ -428,7 +410,6 @@ class CustodianAIApp {
             }
         }
 
-        // Clear welcome message and show chat history
         const messagesContainer = document.getElementById('chat-messages');
         const welcomeText = `Hello! I'm ${agent.name}, your AI assistant. I specialize in ${agent.specialization || 'general tasks'}, helping you to ${uiData.description.charAt(0).toLowerCase() + uiData.description.slice(1)} How can I help you today?`;
         
@@ -441,7 +422,6 @@ class CustodianAIApp {
             </div>
         `;
         
-        // Start a new chat session if switching agents
         this.currentChatId = crypto.randomUUID ? crypto.randomUUID() : 'chat-' + Date.now();
         this.currentMessages = [{ sender: agent.name, content: welcomeText }];
         this.saveChatToDb();
@@ -460,16 +440,13 @@ class CustodianAIApp {
         
         if (!message) return;
 
-        // Reset textarea height
         chatInput.style.height = 'auto';
-        // Add user message to chat
         this.addMessageToChat('user', 'You', message);
         chatInput.value = '';
         
         this.currentMessages.push({ sender: 'You', content: message });
         this.saveChatToDb();
 
-        // Show loading
         this.showLoading(true);
 
         try {
@@ -505,11 +482,14 @@ class CustodianAIApp {
         const incognitoToggle = document.getElementById('incognitoToggle');
         if (incognitoToggle && incognitoToggle.checked) {
             console.log('Incognito mode active - not saving chat to DB');
-            return; // Skip saving completely when incognito is on
+            return;
         }
 
         const userStr = localStorage.getItem('custodian_user');
-        if (!userStr) return;
+        if (!userStr) {
+            console.log('User not authenticated - not saving chat to DB');
+            return;
+        }
         const user = JSON.parse(userStr);
         
         const title = this.currentMessages.length > 1 
@@ -517,7 +497,7 @@ class CustodianAIApp {
             : 'New Chat with ' + (this.currentAgent ? this.currentAgent.name : 'Agent');
             
         try {
-            await fetch('/api/v1/chats', {
+            await fetch('/api/v1/auth/user/chats', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -537,7 +517,6 @@ class CustodianAIApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
         
-        // Parse markdown if it's from agent or if markdown is available
         let parsedContent = content;
         if (typeof marked !== 'undefined' && type === 'agent') {
             parsedContent = marked.parse(content);
@@ -548,14 +527,12 @@ class CustodianAIApp {
             <div class="message-content ${type === 'agent' ? 'markdown-body' : ''}">${parsedContent}</div>
         `;
         
-        // Add Run Code buttons to pre blocks
         if (type === 'agent') {
             const preBlocks = messageDiv.querySelectorAll('pre');
             preBlocks.forEach((pre, index) => {
                 const codeBlock = pre.querySelector('code');
                 if (codeBlock) {
-                    // Extract language
-                    let lang = 'python'; // default
+                    let lang = 'python';
                     const langClass = Array.from(codeBlock.classList).find(c => c.startsWith('language-'));
                     if (langClass) {
                         lang = langClass.replace('language-', '');
@@ -589,7 +566,6 @@ class CustodianAIApp {
     }
 
     async runCode(code, lang, preElement) {
-        // Create or find output container
         let outputContainer = preElement.nextElementSibling;
         if (!outputContainer || !outputContainer.classList.contains('code-output')) {
             outputContainer = document.createElement('div');
@@ -655,7 +631,6 @@ class CustodianAIApp {
                 this.tasksCompleted++;
                 document.getElementById('tasks-completed').textContent = this.tasksCompleted;
                 
-                // Clear form
                 document.getElementById('task-form').reset();
             } else {
                 throw new Error(data.detail || 'Failed to execute task');
@@ -671,7 +646,6 @@ class CustodianAIApp {
     displayTaskResult(taskData) {
         const resultsContainer = document.getElementById('task-results');
         
-        // Remove placeholder if it exists
         const placeholder = resultsContainer.querySelector('.results-placeholder');
         if (placeholder) {
             placeholder.remove();
@@ -698,7 +672,6 @@ class CustodianAIApp {
     }
 
     async showSection(sectionName) {
-        // Update navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
         });
@@ -708,7 +681,6 @@ class CustodianAIApp {
             navItem.classList.add('active');
         }
         
-        // Update content sections
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
@@ -718,11 +690,9 @@ class CustodianAIApp {
             sectionElement.classList.add('active');
         }
         
-        // Load section-specific data
         if (sectionName === 'learn') {
             this.updateLearningPathsGrid();
         }
-        // Other sections can have their data loading logic here
     }
 
     showLoading(show) {
@@ -735,14 +705,79 @@ class CustodianAIApp {
     }
 
     showError(message) {
-        // Simple error display - could be enhanced with a proper modal
         alert('Error: ' + message);
     }
 
     startPeriodicUpdates() {
-        // Update army status every 30 seconds
-        // This can be re-enabled if needed for live status updates on the dashboard
         // setInterval(() => { this.loadAgents(); }, 30000);
+    }
+
+    // Load a past chat into the current session
+    async loadChatIntoCurrentSession(chatId) {
+        try {
+            const userStr = localStorage.getItem('custodian_user');
+            if (!userStr) {
+                throw new Error('User not authenticated');
+            }
+            const user = JSON.parse(userStr);
+            
+            const response = await fetch(`/api/v1/chats?email=${encodeURIComponent(user.email)}`);
+            const data = await response.json();
+            
+            const chat = data.chats.find(c => c.id === chatId);
+            if (!chat) {
+                throw new Error('Chat not found');
+            }
+            
+            this.currentChatId = chat.id;
+            this.currentMessages = chat.messages;
+            
+            const firstAgentMessage = chat.messages.find(m => m.sender !== 'You');
+            if (firstAgentMessage) {
+                const agent = this.agents.find(a => a.name === firstAgentMessage.sender);
+                if (agent) {
+                    this.selectChatAgent(agent);
+                }
+            }
+            
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = '';
+            chat.messages.forEach(msg => {
+                const type = msg.sender === 'You' ? 'user' : 'agent';
+                this.addMessageToChat(type, msg.sender, msg.content);
+            });
+            
+            const chatHistoryModal = bootstrap.Modal.getInstance(document.getElementById('chatHistoryModal'));
+            if (chatHistoryModal) {
+                chatHistoryModal.hide();
+            }
+        } catch (err) {
+            console.error("Failed to load chat", err);
+            alert('Failed to load chat: ' + err.message);
+        }
+    }
+
+    // Delete a chat session
+    async deleteChat(chatId) {
+        if (!confirm('Are you sure you want to delete this chat session?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v1/auth/user/chats/${chatId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete chat');
+            }
+            
+            // Reload chat history
+            await loadChatHistory();
+        } catch (err) {
+            console.error("Failed to delete chat", err);
+            alert('Failed to delete chat: ' + err.message);
+        }
     }
 }
 
@@ -767,12 +802,11 @@ window.updateUserProfile = function(user) {
     const editEmailInput = document.getElementById('profileEmailInput');
     
     if (profileIcon && user.picture) profileIcon.src = user.picture;
-    if (profileName && user.name) profileName.textContent = user.name.split(' ')[0]; // Show first name
+    if (profileName && user.name) profileName.textContent = user.name.split(' ')[0];
     
     if (editNameInput) editNameInput.value = user.name || '';
     if (editEmailInput) editEmailInput.value = user.email || '';
     
-    // Save to localStorage for session persistence
     localStorage.setItem('custodian_user', JSON.stringify(user));
 };
 
@@ -798,35 +832,115 @@ window.logout = async function() {
     }
 };
 
+// Load chat history from backend
+window.loadChatHistory = async function() {
+    try {
+        const response = await fetch('/api/v1/auth/user/chats');
+        if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('custodian_user');
+                const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+                authModal.show();
+            }
+            throw new Error('Failed to load chat history');
+        }
+        
+        const data = await response.json();
+        
+        const list = document.getElementById('chat-history-list');
+        const currentItem = document.getElementById('current-chat-item');
+        list.innerHTML = '';
+        
+        if (data.chats && data.chats.length > 0) {
+            let currentChatHtml = '<p class="text-muted">No messages in current session yet.</p>';
+            let hasPastChats = false;
+            
+            data.chats.forEach(chat => {
+                const date = new Date(chat.last_updated).toLocaleString();
+                const messageCount = chat.messages ? chat.messages.length : 0;
+                
+                const chatHtml = `
+                    <div class="chat-history-card p-3 border border-secondary rounded d-flex justify-content-between align-items-center" style="background: rgba(26, 26, 46, 0.6);">
+                        <div class="flex-grow-1">
+                            <strong class="text-info">${chat.title || 'Chat Session'}</strong>
+                            <div class="text-secondary small">${messageCount} messages • ${date}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" onclick="window.app.loadChatIntoCurrentSession('${chat.id}')">
+                                <i class="fas fa-folder-open"></i> Open
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="window.app.deleteChat('${chat.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                if (window.app && window.app.currentChatId === chat.id) {
+                    currentChatHtml = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-info">${chat.title || 'Current Chat'}</strong>
+                                <div class="text-secondary small">${messageCount} messages</div>
+                            </div>
+                            <span class="badge bg-info text-dark">Active</span>
+                        </div>
+                    `;
+                } else {
+                    hasPastChats = true;
+                    list.innerHTML += chatHtml;
+                }
+            });
+            
+            currentItem.innerHTML = currentChatHtml;
+            if (!hasPastChats) {
+                list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
+            }
+        } else {
+            currentItem.innerHTML = '<p class="text-muted">No messages in current session yet.</p>';
+            list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
+        }
+    } catch (err) {
+        console.error("Failed to load chat history", err);
+        const list = document.getElementById('chat-history-list');
+        if (list) {
+            list.innerHTML = '<p class="text-center text-danger my-4">Failed to load chat history. Please try again.</p>';
+        }
+    }
+};
+
 // Check authentication status on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize the app
     window.app = new CustodianAIApp();
     
-    // Check authentication status from backend
     try {
         const response = await fetch('/api/v1/auth/status');
         const data = await response.json();
         
         if (data.authenticated && data.user) {
             updateUserProfile(data.user);
+        } else {
+            setTimeout(() => {
+                const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+                authModal.show();
+            }, 1000);
         }
     } catch (err) {
         console.error("Failed to check auth status", err);
+        setTimeout(() => {
+            const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+            authModal.show();
+        }, 1000);
     }
 });
 
 // Add some futuristic visual effects
 document.addEventListener('DOMContentLoaded', () => {
-    // Add particle effect to background (optional)
     createParticleEffect();
-    
-    // Add typing effect to headers
     addTypingEffect();
 });
 
 function createParticleEffect() {
-    // Simple particle effect for futuristic feel
     const canvas = document.createElement('canvas');
     canvas.style.position = 'fixed';
     canvas.style.top = '0';
