@@ -99,7 +99,7 @@ const agentUIData = {
     },
     "ResearchAI": {
         description: "Conducts in-depth research, fact-checking, and information synthesis.",
-        image: "https://i.imgur.com/rK4fJpP.png", // research icon
+        image: null,
         useCases: [
             "\"Gather comprehensive research on renewable energy policies in Europe.\"",
             "\"Summarize the key findings of this 50-page academic paper.\""
@@ -107,7 +107,7 @@ const agentUIData = {
     },
     "FactCheckerAI": {
         description: "Verifies claims, cross-references sources, and ensures informational accuracy.",
-        image: "https://i.imgur.com/rK4fJpP.png",
+        image: null,
         useCases: [
             "\"Fact-check the claims made in this news article.\"",
             "\"Find credible sources to support this historical statement.\""
@@ -115,7 +115,7 @@ const agentUIData = {
     },
     "TrendAnalystAI": {
         description: "Identifies emerging patterns and forecasts future trends in various domains.",
-        image: "https://i.imgur.com/rK4fJpP.png",
+        image: null,
         useCases: [
             "\"What are the emerging trends in remote team collaboration tools?\"",
             "\"Analyze social media sentiment to forecast next season's fashion trends.\""
@@ -502,6 +502,12 @@ class CustodianAIApp {
     }
     
     async saveChatToDb() {
+        const incognitoToggle = document.getElementById('incognitoToggle');
+        if (incognitoToggle && incognitoToggle.checked) {
+            console.log('Incognito mode active - not saving chat to DB');
+            return; // Skip saving completely when incognito is on
+        }
+
         const userStr = localStorage.getItem('custodian_user');
         if (!userStr) return;
         const user = JSON.parse(userStr);

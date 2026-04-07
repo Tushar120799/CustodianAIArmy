@@ -14,53 +14,45 @@
 </head>
 <body style="padding-top: 80px;"> <!-- Add padding to body to offset fixed header -->
 
-    <!-- Authentication Container -->
-    <div id="auth-container" class="auth-wrapper">
-        <div class="auth-box">
-            <div class="auth-panel login-panel">
-                <i class="fas fa-robot fa-3x mb-3" style="color: var(--accent-cyan);"></i>
-                <h2 class="mb-3" style="font-family: 'Orbitron', monospace; color: var(--accent-cyan);">Login</h2>
-                <p class="mb-4">Welcome back to Custodian AI Army</p>
-                <div id="g_id_onload"
-                     data-client_id="807434225646-6dc67e8jgouhisr948ngq04qpjrnf7j9.apps.googleusercontent.com"
-                     data-context="use"
-                     data-ux_mode="popup"
-                     data-callback="handleCredentialResponse"
-                     data-auto_prompt="false">
+    <!-- Dismissible Auth Modal -->
+    <div class="modal fade" id="authModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-info">
+                    <h5 class="modal-title text-info" id="authModalLabel">Welcome to Custodian AI Army</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="g_id_signin"
-                     data-type="standard"
-                     data-shape="rectangular"
-                     data-theme="filled_black"
-                     data-text="signin_with"
-                     data-size="large"
-                     data-logo_alignment="left">
-                </div>
-            </div>
-            
-            <div class="auth-divider">
-                <div class="divider-line"></div>
-                <span>OR</span>
-                <div class="divider-line"></div>
-            </div>
+                <div class="modal-body">
+                    <div id="g_id_onload"
+                         data-client_id="807434225646-6dc67e8jgouhisr948ngq04qpjrnf7j9.apps.googleusercontent.com"
+                         data-context="use"
+                         data-ux_mode="popup"
+                         data-callback="handleCredentialResponse"
+                         data-auto_prompt="false">
+                    </div>
 
-            <div class="auth-panel signup-panel">
-                <i class="fas fa-user-plus fa-3x mb-3" style="color: var(--accent-purple);"></i>
-                <h2 class="mb-3" style="font-family: 'Orbitron', monospace; color: var(--accent-purple);">Sign Up</h2>
-                <p class="mb-4">Join the Custodian AI Army</p>
-                <div class="g_id_signin"
-                     data-type="standard"
-                     data-shape="rectangular"
-                     data-theme="filled_black"
-                     data-text="signup_with"
-                     data-size="large"
-                     data-logo_alignment="left">
+                    <p class="text-center mb-4">Sign in to save your chat history, track your progress and unlock all features.</p>
+                    <p class="text-center text-muted mb-4">You can also continue as a guest, but your history won't be saved.</p>
+
+                    <div class="d-flex flex-column gap-3">
+                        <div class="g_id_signin d-flex justify-content-center"
+                             data-type="standard"
+                             data-shape="rectangular"
+                             data-theme="filled_black"
+                             data-text="continue_with"
+                             data-size="large"
+                             data-logo_alignment="left">
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-user-secret me-2"></i> Continue as Guest
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="app-container" id="main-app-container" style="display: none;">
+    <div class="app-container" id="main-app-container">
         <!-- Header -->
         <header class="header fixed-top">
             <div class="header-content container-fluid d-flex align-items-center justify-content-between px-3 py-2 flex-wrap">
@@ -173,6 +165,17 @@
                                     <i class="fas fa-robot"></i>
                                     <p>Welcome to the Custodian AI Army!</p>
                                     <p>Select an agent to begin your conversation.</p>
+                                </div>
+                            </div>
+                            <div class="chat-options-bar d-flex align-items-center gap-2 px-3 py-2 border-top border-info" style="background: rgba(0, 229, 255, 0.05);">
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#mcpModal">
+                                    <i class="fas fa-plug me-1"></i> Add MCP
+                                </button>
+                                <div class="form-check form-switch ms-auto">
+                                    <input class="form-check-input" type="checkbox" id="incognitoToggle">
+                                    <label class="form-check-label text-secondary small" for="incognitoToggle">
+                                        <i class="fas fa-user-secret"></i> Incognito
+                                    </label>
                                 </div>
                             </div>
                             <div class="chat-input-container">
@@ -394,6 +397,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="/static/js/app.js?v=10"></script>
     
+    <!-- MCP Modal -->
+    <div class="modal fade" id="mcpModal" tabindex="-1" aria-labelledby="mcpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-info">
+                    <h5 class="modal-title text-info" id="mcpModalLabel">Add MCP Server</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Connect Model Context Protocol servers to extend agent capabilities.</p>
+                    <div class="mb-3">
+                        <label for="mcpName" class="form-label text-info">Server Name</label>
+                        <input type="text" class="form-control bg-dark text-white border-info" id="mcpName" placeholder="e.g. Filesystem, GitHub">
+                    </div>
+                    <div class="mb-3">
+                        <label for="mcpCommand" class="form-label text-info">Server Command</label>
+                        <input type="text" class="form-control bg-dark text-white border-info" id="mcpCommand" placeholder="npx -y @modelcontextprotocol/server-filesystem">
+                    </div>
+                </div>
+                <div class="modal-footer border-info">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-info" onclick="addMcpServer()" data-bs-dismiss="modal">Add Server</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Parse JWT Token
         function parseJwt(token) {
@@ -425,9 +455,8 @@
             // Save to localStorage for 20-min session
             localStorage.setItem('custodian_user', JSON.stringify(user));
             
-            // Hide auth container and show app
-            document.getElementById('auth-container').style.display = 'none';
-            document.getElementById('main-app-container').style.display = 'flex';
+            // Hide modal
+            bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
             
             updateUserProfile(user);
         }
@@ -523,6 +552,14 @@
 
         document.getElementById('chatHistoryModal').addEventListener('show.bs.modal', loadChatHistory);
 
+        // Add MCP Server handler
+        function addMcpServer() {
+            const name = document.getElementById('mcpName').value;
+            const command = document.getElementById('mcpCommand').value;
+            console.log('Adding MCP server:', name, command);
+            // This will connect to backend MCP system
+        }
+
         // Session check on page load
         document.addEventListener('DOMContentLoaded', () => {
             const userStr = localStorage.getItem('custodian_user');
@@ -535,16 +572,21 @@
                     // Session valid - renew it
                     user.loginTime = now; 
                     localStorage.setItem('custodian_user', JSON.stringify(user));
-                    
-                    document.getElementById('auth-container').style.display = 'none';
-                    document.getElementById('main-app-container').style.display = 'flex';
                     updateUserProfile(user);
                 } else {
                     // Session expired
                     localStorage.removeItem('custodian_user');
-                    document.getElementById('auth-container').style.display = 'flex';
-                    document.getElementById('main-app-container').style.display = 'none';
+                    setTimeout(() => {
+                        const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+                        authModal.show();
+                    }, 1000);
                 }
+            } else {
+                // No user logged in, show modal after short delay
+                setTimeout(() => {
+                    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+                    authModal.show();
+                }, 1000);
             }
         });
     </script>
