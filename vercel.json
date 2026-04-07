@@ -13,6 +13,6 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "sqlite:///custodian_ai.db"
+    "DATABASE_PATH": "/tmp/chat_history.db"
   }
 }

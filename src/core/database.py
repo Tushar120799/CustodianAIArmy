@@ -5,13 +5,27 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import os
 
+# Use /tmp for serverless environments (Vercel, AWS Lambda, etc.)
+# For local development, use a local directory
 DB_PATH = os.getenv('DATABASE_PATH', '/tmp/chat_history.db')
 
 def init_db():
     try:
+        # Ensure the directory exists
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+        
         conn = sqlite3.connect(DB_PATH, timeout=20)
-        conn.execute("PRAGMA journal_mode=WAL")
         cursor = conn.cursor()
+        
+        # Use WAL mode for better concurrency (optional for serverless)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError:
+            # WAL mode may not be supported in all environments
+            pass
+        
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_sessions (
                 id TEXT PRIMARY KEY,
@@ -24,9 +38,13 @@ def init_db():
         ''')
         conn.commit()
         conn.close()
+        print(f"Database initialized at {DB_PATH}")
         return True
     except sqlite3.OperationalError as e:
         print(f"Database initialization error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected database initialization error: {e}")
         return False
 
 def get_chats_for_user(email: str) -> List[Dict[str, Any]]:
