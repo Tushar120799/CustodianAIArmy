@@ -545,38 +545,6 @@
             // This will connect to backend MCP system
         }
 
-        // Session check on page load
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check authentication status from backend
-            await checkAuthStatus();
-            
-            const userStr = localStorage.getItem('custodian_user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                const now = Date.now();
-                const sessionDuration = 20 * 60 * 1000; // 20 minutes in ms
-                
-                if (now - user.loginTime < sessionDuration) {
-                    // Session valid - renew it
-                    user.loginTime = now; 
-                    localStorage.setItem('custodian_user', JSON.stringify(user));
-                    updateUserProfile(user);
-                } else {
-                    // Session expired
-                    localStorage.removeItem('custodian_user');
-                    setTimeout(() => {
-                        const authModal = new bootstrap.Modal(document.getElementById('authModal'));
-                        authModal.show();
-                    }, 1000);
-                }
-            } else {
-                // No user logged in, show modal after short delay
-                setTimeout(() => {
-                    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
-                    authModal.show();
-                }, 1000);
-            }
-        });
     </script>
 
 </file_content>

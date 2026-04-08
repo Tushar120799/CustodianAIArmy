@@ -26,7 +26,7 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
 
 class TokenResponse(BaseModel):
     """Response model for token generation."""
@@ -34,13 +34,19 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: User
 
-def generate_jwt_token(user: User, expires_minutes: int = 20) -> str:
+class ChatSessionSaveRequest(BaseModel):
+    """Request model for saving chat sessions."""
+    id: str
+    user_email: str
+    title: str
+    messages: list
+
+def generate_jwt_token(user: User) -> str:
     """
-    Generate a JWT token for the user.
+    Generate a JWT token for the user with 1-year expiration.
     
     Args:
         user: User object containing user data
-        expires_minutes: Token expiration time in minutes
         
     Returns:
         Encoded JWT token
@@ -50,7 +56,7 @@ def generate_jwt_token(user: User, expires_minutes: int = 20) -> str:
         "email": user.email,
         "name": user.name,
         "picture": user.picture,
-        "exp": datetime.utcnow() + timedelta(minutes=expires_minutes),
+        "exp": datetime.utcnow() + timedelta(days=365),  # 1 year
         "iat": datetime.utcnow(),
         "type": "access"
     }
@@ -200,7 +206,7 @@ async def google_callback(request: Request, code: str = None, error: str = None)
             # Create session
             session_id = create_user_session(user)
             
-            # Generate JWT token
+            # Generate JWT token (now with 1-year expiry)
             jwt_token = generate_jwt_token(user)
             
             # Set session cookie
@@ -231,29 +237,36 @@ async def google_callback(request: Request, code: str = None, error: str = None)
 
 @router.get("/status")
 async def auth_status(
+    request: Request,
     session_id: Optional[str] = Cookie(None),
     access_token: Optional[str] = Cookie(None)
 ) -> JSONResponse:
     """
     Check current authentication status.
-    
-    Args:
-        session_id: Session cookie
-        access_token: JWT token cookie
-        
-    Returns:
-        JSON response with authentication status and user info if authenticated
     """
+    # Debug: log all cookies received
+    all_cookies = request.cookies
+    print(f"DEBUG /auth/status - All cookies received: {list(all_cookies.keys())}")
+    print(f"DEBUG /auth/status - session_id cookie: {session_id[:10] if session_id else 'None'}...")
+    print(f"DEBUG /auth/status - access_token cookie: {access_token[:20] if access_token else 'None'}...")
+    
     user = None
     
     # Try to get user from session first
     if session_id:
+        print(f"DEBUG /auth/status - Looking up session in memory...")
         user = get_user_from_session(session_id)
+        if user:
+            print(f"DEBUG /auth/status - Found session user: {user.email}")
+        else:
+            print(f"DEBUG /auth/status - Session not found in memory (server restart?)")
     
     # If no session, try JWT token
     if not user and access_token:
+        print(f"DEBUG /auth/status - Trying JWT token...")
         payload = decode_jwt_token(access_token)
         if payload:
+            print(f"DEBUG /auth/status - JWT decoded successfully for: {payload.get('email')}")
             user = User(
                 id=payload["sub"],
                 email=payload["email"],
@@ -261,16 +274,21 @@ async def auth_status(
                 picture=payload.get("picture"),
                 created_at=datetime.utcnow()
             )
+        else:
+            print(f"DEBUG /auth/status - JWT decode failed")
     
     if user:
+        # Convert to JSON-serializable dict
+        user_dict = user.model_dump(mode='json') if hasattr(user, 'model_dump') else user.dict()
         return JSONResponse(
             status_code=200,
             content={
                 "authenticated": True,
-                "user": user.dict()
+                "user": user_dict
             }
         )
     
+    print(f"DEBUG /auth/status - No valid auth, returning unauthenticated")
     return JSONResponse(
         status_code=200,
         content={
@@ -342,9 +360,11 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
+    # Convert to JSON-serializable dict
+    user_dict = user.model_dump(mode='json') if hasattr(user, 'model_dump') else user.dict()
     return JSONResponse(
         status_code=200,
-        content={"user": user.dict()}
+        content={"user": user_dict}
     )
 
 @router.get("/user/chats")

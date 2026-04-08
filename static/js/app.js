@@ -216,7 +216,9 @@ class CustodianAIApp {
 
     async loadAgents() {
         try {
-            const response = await fetch('/api/v1/agents');
+            const response = await fetch('/api/v1/agents', {
+                credentials: 'include'
+            });
             const data = await response.json();
             
             this.agents = data.agents;
@@ -452,6 +454,7 @@ class CustodianAIApp {
         try {
             const response = await fetch('/api/v1/chat', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -499,6 +502,7 @@ class CustodianAIApp {
         try {
             await fetch('/api/v1/auth/user/chats', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: this.currentChatId,
@@ -578,6 +582,7 @@ class CustodianAIApp {
         try {
             const response = await fetch('/api/v1/execute-code', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -614,6 +619,7 @@ class CustodianAIApp {
         try {
             const response = await fetch('/api/v1/tasks/execute', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -721,7 +727,9 @@ class CustodianAIApp {
             }
             const user = JSON.parse(userStr);
             
-            const response = await fetch(`/api/v1/chats?email=${encodeURIComponent(user.email)}`);
+            const response = await fetch(`/api/v1/chats?email=${encodeURIComponent(user.email)}`, {
+                credentials: 'include'
+            });
             const data = await response.json();
             
             const chat = data.chats.find(c => c.id === chatId);
@@ -765,7 +773,8 @@ class CustodianAIApp {
         
         try {
             const response = await fetch(`/api/v1/auth/user/chats/${chatId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                credentials: 'include'
             });
             
             if (!response.ok) {
@@ -796,18 +805,40 @@ window.sendMessage = function() {
 
 // Authentication functions
 window.updateUserProfile = function(user) {
+    console.log('[updateUserProfile] Called with user:', user);
     const profileIcon = document.getElementById('user-profile-img');
     const profileName = document.getElementById('user-profile-name');
     const editNameInput = document.getElementById('profileNameInput');
     const editEmailInput = document.getElementById('profileEmailInput');
     
-    if (profileIcon && user.picture) profileIcon.src = user.picture;
-    if (profileName && user.name) profileName.textContent = user.name.split(' ')[0];
+    console.log('[updateUserProfile] DOM elements:', { profileIcon, profileName, editNameInput, editEmailInput });
+    
+    if (profileIcon && user.picture) {
+        console.log('[updateUserProfile] Setting profile picture:', user.picture);
+        profileIcon.src = user.picture;
+    }
+    if (profileName && user.name) {
+        console.log('[updateUserProfile] Setting profile name:', user.name);
+        profileName.textContent = user.name.split(' ')[0];
+    }
     
     if (editNameInput) editNameInput.value = user.name || '';
     if (editEmailInput) editEmailInput.value = user.email || '';
     
     localStorage.setItem('custodian_user', JSON.stringify(user));
+    console.log('[updateUserProfile] Saved user to localStorage');
+    
+    // Hide auth modal if it's showing
+    const authModalElement = document.getElementById('authModal');
+    if (authModalElement) {
+        const authModal = bootstrap.Modal.getInstance(authModalElement);
+        if (authModal) {
+            console.log('[updateUserProfile] Hiding auth modal');
+            authModal.hide();
+        } else {
+            console.log('[updateUserProfile] Auth modal not found or not initialized');
+        }
+    }
 };
 
 window.saveProfileDetails = async function() {
@@ -823,7 +854,10 @@ window.saveProfileDetails = async function() {
 
 window.logout = async function() {
     try {
-        await fetch('/api/v1/auth/logout', { method: 'POST' });
+        await fetch('/api/v1/auth/logout', { 
+            method: 'POST',
+            credentials: 'include'
+        });
     } catch (err) {
         console.error("Logout error", err);
     } finally {
@@ -835,7 +869,10 @@ window.logout = async function() {
 // Load chat history from backend
 window.loadChatHistory = async function() {
     try {
-        const response = await fetch('/api/v1/auth/user/chats');
+        console.log('[loadChatHistory] Loading chat history...');
+        const response = await fetch('/api/v1/auth/user/chats', {
+            credentials: 'include'
+        });
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('custodian_user');
@@ -846,6 +883,7 @@ window.loadChatHistory = async function() {
         }
         
         const data = await response.json();
+        console.log('[loadChatHistory] Received data:', data);
         
         const list = document.getElementById('chat-history-list');
         const currentItem = document.getElementById('current-chat-item');
@@ -911,22 +949,52 @@ window.loadChatHistory = async function() {
 
 // Check authentication status on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[Auth] DOMContentLoaded fired');
     window.app = new CustodianAIApp();
     
+    // First check if we have a cached user in localStorage
+    const cachedUser = localStorage.getItem('custodian_user');
+    console.log('[Auth] Cached user from localStorage:', cachedUser);
+    
+    if (cachedUser) {
+        try {
+            const user = JSON.parse(cachedUser);
+            console.log('[Auth] Found cached user, calling updateUserProfile:', user);
+            updateUserProfile(user);
+            // User has cached profile - skip backend check and don't show auth modal
+            console.log('[Auth] Using cached user from localStorage, skipping backend auth check');
+            return;
+        } catch (e) {
+            // Invalid cached data, clear it
+            console.error('[Auth] Error parsing cached user:', e);
+            localStorage.removeItem('custodian_user');
+        }
+    }
+    
+    // If no cached user, try backend auth status
     try {
-        const response = await fetch('/api/v1/auth/status');
+        console.log('[Auth] No cached user, checking backend auth status...');
+        const response = await fetch('/api/v1/auth/status', {
+            credentials: 'include'  // This is crucial - sends cookies with the request
+        });
         const data = await response.json();
+        console.log('[Auth] Auth status response:', data);
         
         if (data.authenticated && data.user) {
+            console.log('[Auth] Backend says authenticated, updating profile with:', data.user);
             updateUserProfile(data.user);
+            console.log('[Auth] updateUserProfile called successfully');
         } else {
+            // Not authenticated - show login modal after a short delay
+            console.log('[Auth] Not authenticated, showing login modal');
             setTimeout(() => {
                 const authModal = new bootstrap.Modal(document.getElementById('authModal'));
                 authModal.show();
             }, 1000);
         }
     } catch (err) {
-        console.error("Failed to check auth status", err);
+        console.error('[Auth] Failed to check auth status', err);
+        // Only show modal if we truly have no cached user
         setTimeout(() => {
             const authModal = new bootstrap.Modal(document.getElementById('authModal'));
             authModal.show();
