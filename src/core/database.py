@@ -36,6 +36,32 @@ def init_db():
                 messages TEXT NOT NULL
             )
         ''')
+
+        # User progress tracking table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_email TEXT NOT NULL,
+                course_id TEXT NOT NULL,
+                lang TEXT NOT NULL DEFAULT 'en',
+                section_index INTEGER NOT NULL DEFAULT 0,
+                completed_sections TEXT NOT NULL DEFAULT '[]',
+                last_updated TEXT NOT NULL,
+                UNIQUE(user_email, course_id, lang)
+            )
+        ''')
+
+        # User profile/preferences table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_profile (
+                user_email TEXT PRIMARY KEY,
+                current_course TEXT,
+                current_lang TEXT DEFAULT 'en',
+                preferences TEXT NOT NULL DEFAULT '{}',
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")

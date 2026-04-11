@@ -57,6 +57,11 @@
     
                 <!-- Right side: Stats & Profile -->
                 <div class="d-flex align-items-center gap-2">
+                    <!-- Language Toggle -->
+                    <div class="lang-toggle d-flex gap-1 me-2">
+                        <button class="btn btn-sm btn-outline-info active" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="lang-de-btn" onclick="setLanguage('de')">DE</button>
+                    </div>
                     <div class="header-stats d-flex gap-2 gap-md-3 d-none d-md-flex">
                         <div class="stat-item text-center">
                             <span class="stat-label d-block">Active Agents</span>
@@ -188,12 +193,152 @@
 
                 <!-- Learn With AI Section -->
                 <section id="learn" class="content-section">
-                    <div class="section-header">
-                        <h2>Learn with AI</h2>
-                        <p>Choose a learning path to begin your journey. Each path includes AI-guided lessons and a real-time code editor.</p>
+                    <div class="section-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <h2>Learn with AI</h2>
+                            <p>Choose a learning path to begin your journey. Each path includes AI-guided lessons and a real-time code editor.</p>
+                        </div>
+                        <!-- Category Filter -->
+                        <div class="d-flex flex-wrap gap-2 align-items-center" id="category-filter-bar">
+                            <button class="btn btn-sm btn-info active" data-category="all" onclick="filterCourses('all', this)">All</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="Python" onclick="filterCourses('Python', this)">Python</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="JavaScript" onclick="filterCourses('JavaScript', this)">JavaScript</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="React" onclick="filterCourses('React', this)">React</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="TypeScript" onclick="filterCourses('TypeScript', this)">TypeScript</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="Frontend" onclick="filterCourses('Frontend', this)">Frontend</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="Node.js" onclick="filterCourses('Node.js', this)">Node.js</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="Databases" onclick="filterCourses('Databases', this)">Databases</button>
+                            <button class="btn btn-sm btn-outline-info" data-category="Tools" onclick="filterCourses('Tools', this)">Tools</button>
+                        </div>
                     </div>
                     <div class="learning-paths-grid" id="learning-paths-grid">
                         <!-- Learning paths will be populated here by app.js -->
+                    </div>
+                </section>
+
+                <!-- Course Detail Section -->
+                <section id="course-detail" class="content-section">
+                    <div class="course-detail-layout">
+                        <!-- Course Sidebar: Module Navigation -->
+                        <aside class="course-sidebar" id="course-sidebar">
+                            <div class="course-sidebar-header">
+                                <button class="btn btn-sm btn-outline-secondary mb-3" onclick="window.app.showSection('learn')">
+                                    <i class="fas fa-arrow-left me-1"></i> Back to Courses
+                                </button>
+                                <h5 id="course-sidebar-title" class="text-info">Course Modules</h5>
+                                <!-- Progress Bar -->
+                                <div class="course-progress-bar mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Progress</span>
+                                        <span id="course-progress-pct">0%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-info" id="course-progress-fill" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <div class="small text-muted mt-1"><span id="course-completed-count">0</span> / <span id="course-total-count">0</span> modules completed</div>
+                                </div>
+                            </div>
+                            <nav class="course-module-list" id="course-module-list">
+                                <!-- Module items populated by JS -->
+                            </nav>
+                        </aside>
+
+                        <!-- Course Main Content -->
+                        <div class="course-main-content">
+                            <!-- Course Header -->
+                            <div class="course-content-header" id="course-content-header">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h3 id="course-section-title" class="text-info mb-1">Section Title</h3>
+                                        <span class="badge bg-secondary" id="course-lang-badge">EN</span>
+                                        <span class="badge bg-info ms-1" id="course-section-badge">1 / 1</span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" id="prev-section-btn" onclick="window.app.navigateSection(-1)" disabled>
+                                            <i class="fas fa-chevron-left"></i> Prev
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" id="mark-complete-btn" onclick="window.app.markSectionComplete()">
+                                            <i class="fas fa-check me-1"></i> Mark Complete
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" id="next-section-btn" onclick="window.app.navigateSection(1)">
+                                            Next <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slide Content -->
+                            <div class="course-slide-content markdown-body" id="course-slide-content">
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-book-open fa-3x mb-3"></i>
+                                    <p>Select a module to start learning</p>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Code Terminal (collapsed by default) -->
+                            <div class="course-terminal-section" id="course-terminal-section" style="display:none;">
+                                <div class="course-terminal-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="window.app.toggleCourseTerminal()">
+                                    <span><i class="fas fa-terminal me-2"></i>Interactive Code Terminal</span>
+                                    <div class="d-flex gap-2" onclick="event.stopPropagation()">
+                                        <button class="btn btn-sm btn-success" onclick="window.app.runCourseCode()">
+                                            <i class="fas fa-play me-1"></i> Run
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.app.clearCourseTerminal()">
+                                            <i class="fas fa-trash me-1"></i> Clear
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.app.toggleCourseTerminal()">
+                                            <i class="fas fa-chevron-down" id="terminal-chevron"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="course-terminal-body">
+                                    <textarea id="course-code-input" class="course-code-editor" placeholder="# Write your Python code here and click Run...
+# Example:
+name = 'World'
+print(f'Hello, {name}!')
+" rows="8" spellcheck="false"></textarea>
+                                    <div class="course-terminal-output" id="course-terminal-output">
+                                        <span class="text-muted">Output will appear here...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Terminal Toggle Button (shown when terminal is hidden) -->
+                            <div class="course-terminal-toggle-bar" id="course-terminal-toggle-bar">
+                                <button class="btn btn-sm btn-outline-secondary w-100" onclick="window.app.openCourseTerminal()">
+                                    <i class="fas fa-terminal me-2"></i> Open Interactive Code Terminal
+                                </button>
+                            </div>
+
+                            <!-- AI Assist Button -->
+                            <div class="course-ai-assist-bar">
+                                <button class="btn btn-info w-100" id="course-ai-assist-btn" onclick="window.app.openCourseAIAssist()">
+                                    <i class="fas fa-robot me-2"></i> Ask AI Tutor about this topic
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Tutor Chat Panel (slide-in) -->
+                    <div class="course-ai-panel" id="course-ai-panel" style="display:none;">
+                        <div class="course-ai-panel-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-robot me-2"></i>AI Tutor</span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="window.app.closeCourseAIPanel()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="course-ai-messages" id="course-ai-messages">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-robot fa-2x mb-2"></i>
+                                <p class="small">Ask me anything about this topic!</p>
+                            </div>
+                        </div>
+                        <div class="course-ai-input-area">
+                            <textarea id="course-ai-input" class="form-control bg-dark text-white border-info" rows="2" placeholder="Ask about this topic, paste your code for review..."></textarea>
+                            <button class="btn btn-info mt-2 w-100" onclick="window.app.sendCourseAIMessage()">
+                                <i class="fas fa-paper-plane me-1"></i> Send
+                            </button>
+                        </div>
                     </div>
                 </section>
 

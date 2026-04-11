@@ -1,0 +1,435 @@
+{
+  "courses": [
+    {
+      "id": "python-beginner",
+      "lang": "en",
+      "title": "Python Beginner",
+      "category": "Python",
+      "description": "Master the fundamentals of Python programming from scratch.",
+      "icon": "fab fa-python",
+      "slide_count": 28,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "02-language-overview-en.md", "title": "Language Overview" },
+        { "file": "03-installation-on-windows-en.md", "title": "Installation" },
+        { "file": "04-interactive-console-en.md", "title": "Interactive Console" },
+        { "file": "05-variables-en.md", "title": "Variables" },
+        { "file": "10-basic-types-en.md", "title": "Basic Types" },
+        { "file": "11-types-and-type-conversions-en.md", "title": "Type Conversions" },
+        { "file": "12-functions-en.md", "title": "Functions" },
+        { "file": "13-composite-types-en.md", "title": "Composite Types" },
+        { "file": "14-object-references-and-mutations-en.md", "title": "Object References" },
+        { "file": "16-help-and-documentation-en.md", "title": "Help & Documentation" },
+        { "file": "20-development-environments-en.md", "title": "Development Environments" },
+        { "file": "22-our-first-python-program-en.md", "title": "First Python Program" },
+        { "file": "23-builtins-standard-library-en.md", "title": "Builtins & Standard Library" },
+        { "file": "30-control-structures-en.md", "title": "Control Structures" },
+        { "file": "31-comparisons-en.md", "title": "Comparisons" },
+        { "file": "32-if-else-en.md", "title": "If/Else" },
+        { "file": "33-while-loops-en.md", "title": "While Loops" },
+        { "file": "35-for-loops-en.md", "title": "For Loops" },
+        { "file": "36-counting-loops-en.md", "title": "Counting Loops" },
+        { "file": "37-parts-of-programs-en.md", "title": "Parts of Programs" },
+        { "file": "38-control-structures-exercises-en.md", "title": "Control Structures Exercises" },
+        { "file": "60-function-parameters-en.md", "title": "Function Parameters" },
+        { "file": "61-functions-definition-en.md", "title": "Defining Functions" },
+        { "file": "62-functions-exercises-en.md", "title": "Functions Exercises" },
+        { "file": "65-local-modules-en.md", "title": "Local Modules" },
+        { "file": "80-code-quality-linting-en.md", "title": "Code Quality & Linting" },
+        { "file": "81-debugging-en.md", "title": "Debugging" }
+      ]
+    },
+    {
+      "id": "python-beginner",
+      "lang": "de",
+      "title": "Python Beginner",
+      "category": "Python",
+      "description": "Grundlagen der Python-Programmierung von Grund auf erlernen.",
+      "icon": "fab fa-python",
+      "slide_count": 28,
+      "sections": [
+        { "file": "01-title-topics-de.md", "title": "Themenübersicht" },
+        { "file": "02-language-overview-de.md", "title": "Sprachübersicht" },
+        { "file": "05-variables-de.md", "title": "Variablen" },
+        { "file": "10-basic-types-de.md", "title": "Grundlegende Typen" },
+        { "file": "12-functions-de.md", "title": "Funktionen" },
+        { "file": "30-control-structures-de.md", "title": "Kontrollstrukturen" },
+        { "file": "32-if-else-de.md", "title": "If/Else" },
+        { "file": "35-for-loops-de.md", "title": "For-Schleifen" },
+        { "file": "61-functions-definition-de.md", "title": "Funktionen definieren" },
+        { "file": "81-debugging-de.md", "title": "Debugging" }
+      ]
+    },
+    {
+      "id": "python-advanced",
+      "lang": "en",
+      "title": "Python Advanced",
+      "category": "Python",
+      "description": "Advanced Python concepts including OOP, decorators, and more.",
+      "icon": "fab fa-python",
+      "slide_count": 20,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-logging-en.md", "title": "Logging" },
+        { "file": "11-unit-tests-en.md", "title": "Unit Tests" },
+        { "file": "20-oop-en.md", "title": "Object-Oriented Programming" },
+        { "file": "30-iterators-en.md", "title": "Iterators" },
+        { "file": "40-generators-en.md", "title": "Generators" },
+        { "file": "50-decorators-en.md", "title": "Decorators" },
+        { "file": "60-context-managers-en.md", "title": "Context Managers" }
+      ]
+    },
+    {
+      "id": "python-intermediate",
+      "lang": "en",
+      "title": "Python Intermediate",
+      "category": "Python",
+      "description": "Intermediate Python topics bridging beginner and advanced concepts.",
+      "icon": "fab fa-python",
+      "slide_count": 18,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-comprehensions-en.md", "title": "Comprehensions" },
+        { "file": "20-lambda-en.md", "title": "Lambda Functions" },
+        { "file": "30-map-filter-en.md", "title": "Map & Filter" },
+        { "file": "40-exceptions-en.md", "title": "Exceptions" },
+        { "file": "50-file-io-en.md", "title": "File I/O" }
+      ]
+    },
+    {
+      "id": "python-in-practice",
+      "lang": "en",
+      "title": "Python in Practice",
+      "category": "Python",
+      "description": "Real-world Python applications and practical projects.",
+      "icon": "fab fa-python",
+      "slide_count": 15,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-web-scraping-en.md", "title": "Web Scraping" },
+        { "file": "20-apis-en.md", "title": "Working with APIs" },
+        { "file": "30-databases-en.md", "title": "Databases" },
+        { "file": "40-automation-en.md", "title": "Automation" }
+      ]
+    },
+    {
+      "id": "python-data-science-1-overview-and-numpy",
+      "lang": "en",
+      "title": "Python Data Science: NumPy",
+      "category": "Python",
+      "description": "Introduction to data science with Python and NumPy.",
+      "icon": "fas fa-chart-bar",
+      "slide_count": 22,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-overview-en.md", "title": "Data Science Overview" },
+        { "file": "20-numpy-en.md", "title": "NumPy Basics" },
+        { "file": "30-arrays-en.md", "title": "Arrays" },
+        { "file": "40-operations-en.md", "title": "Array Operations" }
+      ]
+    },
+    {
+      "id": "python-data-science-2-pyplot",
+      "lang": "en",
+      "title": "Python Data Science: Pyplot",
+      "category": "Python",
+      "description": "Data visualization with Matplotlib and Pyplot.",
+      "icon": "fas fa-chart-line",
+      "slide_count": 18,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-pyplot-basics-en.md", "title": "Pyplot Basics" },
+        { "file": "20-plot-types-en.md", "title": "Plot Types" },
+        { "file": "30-customization-en.md", "title": "Customization" }
+      ]
+    },
+    {
+      "id": "python-data-science-3-pandas",
+      "lang": "en",
+      "title": "Python Data Science: Pandas",
+      "category": "Python",
+      "description": "Data manipulation and analysis with Pandas.",
+      "icon": "fas fa-table",
+      "slide_count": 25,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-series-en.md", "title": "Series" },
+        { "file": "20-dataframes-en.md", "title": "DataFrames" },
+        { "file": "30-filtering-en.md", "title": "Filtering Data" },
+        { "file": "40-groupby-en.md", "title": "GroupBy" }
+      ]
+    },
+    {
+      "id": "python-data-science-4-machine-learning",
+      "lang": "en",
+      "title": "Python Data Science: Machine Learning",
+      "category": "Python",
+      "description": "Machine learning fundamentals with scikit-learn.",
+      "icon": "fas fa-brain",
+      "slide_count": 30,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-supervised-learning-en.md", "title": "Supervised Learning" },
+        { "file": "20-classification-en.md", "title": "Classification" },
+        { "file": "30-regression-en.md", "title": "Regression" },
+        { "file": "40-model-evaluation-en.md", "title": "Model Evaluation" }
+      ]
+    },
+    {
+      "id": "python-data-science-5-neural-networks",
+      "lang": "en",
+      "title": "Python Data Science: Neural Networks",
+      "category": "Python",
+      "description": "Deep learning and neural networks with Python.",
+      "icon": "fas fa-project-diagram",
+      "slide_count": 20,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-neural-networks-en.md", "title": "Neural Networks" },
+        { "file": "20-keras-en.md", "title": "Keras" },
+        { "file": "30-training-en.md", "title": "Training Models" }
+      ]
+    },
+    {
+      "id": "javascript-beginner",
+      "lang": "de",
+      "title": "JavaScript Beginner",
+      "category": "JavaScript",
+      "description": "Grundlagen der JavaScript-Programmierung.",
+      "icon": "fab fa-js-square",
+      "slide_count": 25,
+      "sections": [
+        { "file": "01-title-topics-de.md", "title": "Themenübersicht" },
+        { "file": "10-basics-de.md", "title": "Grundlagen" },
+        { "file": "20-variables-de.md", "title": "Variablen" },
+        { "file": "30-functions-de.md", "title": "Funktionen" },
+        { "file": "40-arrays-de.md", "title": "Arrays" }
+      ]
+    },
+    {
+      "id": "javascript-es-2015",
+      "lang": "en",
+      "title": "JavaScript ES2015+",
+      "category": "JavaScript",
+      "description": "Modern JavaScript features from ES2015 and beyond.",
+      "icon": "fab fa-js-square",
+      "slide_count": 22,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-let-const-en.md", "title": "let & const" },
+        { "file": "20-arrow-functions-en.md", "title": "Arrow Functions" },
+        { "file": "30-destructuring-en.md", "title": "Destructuring" },
+        { "file": "40-modules-en.md", "title": "Modules" },
+        { "file": "50-promises-en.md", "title": "Promises" }
+      ]
+    },
+    {
+      "id": "javascript-async-and-network-requests",
+      "lang": "en",
+      "title": "JavaScript Async & Network",
+      "category": "JavaScript",
+      "description": "Asynchronous JavaScript and network requests.",
+      "icon": "fab fa-js-square",
+      "slide_count": 18,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-callbacks-en.md", "title": "Callbacks" },
+        { "file": "20-promises-en.md", "title": "Promises" },
+        { "file": "30-async-await-en.md", "title": "Async/Await" },
+        { "file": "40-fetch-en.md", "title": "Fetch API" }
+      ]
+    },
+    {
+      "id": "javascript-testing",
+      "lang": "en",
+      "title": "JavaScript Testing",
+      "category": "JavaScript",
+      "description": "Testing JavaScript applications with Jest and more.",
+      "icon": "fab fa-js-square",
+      "slide_count": 15,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-unit-testing-en.md", "title": "Unit Testing" },
+        { "file": "20-jest-en.md", "title": "Jest" },
+        { "file": "30-mocking-en.md", "title": "Mocking" }
+      ]
+    },
+    {
+      "id": "react",
+      "lang": "en",
+      "title": "React",
+      "category": "React",
+      "description": "Build modern user interfaces with React.",
+      "icon": "fab fa-react",
+      "slide_count": 35,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-jsx-en.md", "title": "JSX" },
+        { "file": "20-components-en.md", "title": "Components" },
+        { "file": "30-props-en.md", "title": "Props" },
+        { "file": "40-state-en.md", "title": "State" },
+        { "file": "50-hooks-en.md", "title": "Hooks" },
+        { "file": "60-events-en.md", "title": "Events" }
+      ]
+    },
+    {
+      "id": "react-advanced",
+      "lang": "en",
+      "title": "React Advanced",
+      "category": "React",
+      "description": "Advanced React patterns and techniques.",
+      "icon": "fab fa-react",
+      "slide_count": 28,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-context-en.md", "title": "Context API" },
+        { "file": "20-custom-hooks-en.md", "title": "Custom Hooks" },
+        { "file": "30-performance-en.md", "title": "Performance" },
+        { "file": "40-patterns-en.md", "title": "Design Patterns" }
+      ]
+    },
+    {
+      "id": "react-redux",
+      "lang": "en",
+      "title": "React Redux",
+      "category": "React",
+      "description": "State management with Redux in React applications.",
+      "icon": "fab fa-react",
+      "slide_count": 22,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-redux-basics-en.md", "title": "Redux Basics" },
+        { "file": "20-actions-en.md", "title": "Actions & Reducers" },
+        { "file": "30-store-en.md", "title": "Store" },
+        { "file": "40-react-redux-en.md", "title": "React-Redux" }
+      ]
+    },
+    {
+      "id": "typescript",
+      "lang": "en",
+      "title": "TypeScript",
+      "category": "TypeScript",
+      "description": "Type-safe JavaScript with TypeScript.",
+      "icon": "fas fa-code",
+      "slide_count": 25,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-types-en.md", "title": "Types" },
+        { "file": "20-interfaces-en.md", "title": "Interfaces" },
+        { "file": "30-generics-en.md", "title": "Generics" },
+        { "file": "40-classes-en.md", "title": "Classes" }
+      ]
+    },
+    {
+      "id": "frontend-html",
+      "lang": "en",
+      "title": "HTML Fundamentals",
+      "category": "Frontend",
+      "description": "The building blocks of the web with HTML.",
+      "icon": "fab fa-html5",
+      "slide_count": 20,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-structure-en.md", "title": "HTML Structure" },
+        { "file": "20-elements-en.md", "title": "HTML Elements" },
+        { "file": "30-forms-en.md", "title": "Forms" },
+        { "file": "40-semantic-en.md", "title": "Semantic HTML" }
+      ]
+    },
+    {
+      "id": "frontend-css",
+      "lang": "en",
+      "title": "CSS Fundamentals",
+      "category": "Frontend",
+      "description": "Style web pages with CSS.",
+      "icon": "fab fa-css3-alt",
+      "slide_count": 22,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-selectors-en.md", "title": "Selectors" },
+        { "file": "20-box-model-en.md", "title": "Box Model" },
+        { "file": "30-flexbox-en.md", "title": "Flexbox" },
+        { "file": "40-grid-en.md", "title": "CSS Grid" }
+      ]
+    },
+    {
+      "id": "node-and-npm",
+      "lang": "en",
+      "title": "Node.js & npm",
+      "category": "Node.js",
+      "description": "Server-side JavaScript with Node.js and package management.",
+      "icon": "fab fa-node-js",
+      "slide_count": 20,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-node-basics-en.md", "title": "Node.js Basics" },
+        { "file": "20-npm-en.md", "title": "npm" },
+        { "file": "30-modules-en.md", "title": "Modules" },
+        { "file": "40-express-en.md", "title": "Express.js" }
+      ]
+    },
+    {
+      "id": "git",
+      "lang": "en",
+      "title": "Git Version Control",
+      "category": "Tools",
+      "description": "Version control with Git.",
+      "icon": "fab fa-git-alt",
+      "slide_count": 18,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-basics-en.md", "title": "Git Basics" },
+        { "file": "20-branching-en.md", "title": "Branching" },
+        { "file": "30-merging-en.md", "title": "Merging" },
+        { "file": "40-remote-en.md", "title": "Remote Repositories" }
+      ]
+    },
+    {
+      "id": "databases-datastore",
+      "lang": "en",
+      "title": "Databases & Datastores",
+      "category": "Databases",
+      "description": "SQL and NoSQL databases for data storage.",
+      "icon": "fas fa-database",
+      "slide_count": 22,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-sql-basics-en.md", "title": "SQL Basics" },
+        { "file": "20-queries-en.md", "title": "Queries" },
+        { "file": "30-nosql-en.md", "title": "NoSQL" },
+        { "file": "40-mongodb-en.md", "title": "MongoDB" }
+      ]
+    },
+    {
+      "id": "terminal-basics",
+      "lang": "en",
+      "title": "Terminal Basics",
+      "category": "Tools",
+      "description": "Command line fundamentals for developers.",
+      "icon": "fas fa-terminal",
+      "slide_count": 12,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-navigation-en.md", "title": "Navigation" },
+        { "file": "20-file-operations-en.md", "title": "File Operations" },
+        { "file": "30-processes-en.md", "title": "Processes" }
+      ]
+    },
+    {
+      "id": "http",
+      "lang": "en",
+      "title": "HTTP Protocol",
+      "category": "Web",
+      "description": "Understanding the HTTP protocol and web communication.",
+      "icon": "fas fa-globe",
+      "slide_count": 15,
+      "sections": [
+        { "file": "01-title-topics-en.md", "title": "Topics Overview" },
+        { "file": "10-http-basics-en.md", "title": "HTTP Basics" },
+        { "file": "20-methods-en.md", "title": "HTTP Methods" },
+        { "file": "30-status-codes-en.md", "title": "Status Codes" },
+        { "file": "40-headers-en.md", "title": "Headers" }
+      ]
+    }
+  ]
+}

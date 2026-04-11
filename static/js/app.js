@@ -1,18 +1,35 @@
-// Learning Path Data
-const learningPathData = {
-    "paths": [
-        { name: "React", description: "Build modern, dynamic user interfaces with this popular JavaScript library.", icon: "fab fa-react" },
-        { name: "Vue", description: "An approachable, performant and versatile framework for building web user interfaces.", icon: "fab fa-vuejs" },
-        { name: "Python", description: "Master the versatile language for web development, data science, and AI.", icon: "fab fa-python" },
-        { name: "Python and Data Science", description: "Use Python for data analysis, visualization, and machine learning.", icon: "fas fa-chart-pie" },
-        { name: "General", description: "Learn the fundamentals of programming and computer science concepts.", icon: "fas fa-laptop-code" },
-        { name: "HTML and CSS", description: "The building blocks of the web. Create and style web pages from scratch.", icon: "fab fa-html5" },
-        { name: "JavaScript and TypeScript", description: "Master the core language of the web and its typed superset.", icon: "fab fa-js-square" },
-        { name: "Data Types and Data Formats", description: "Understand JSON, XML, CSV, and other common data formats.", icon: "fas fa-file-alt" },
-        { name: "Databases", description: "Learn about SQL and NoSQL databases for storing and retrieving data.", icon: "fas fa-database" },
-        { name: "Others", description: "Explore various other technologies and programming concepts.", icon: "fas fa-ellipsis-h" }
-    ]
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// LANGUAGE STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let currentLanguage = localStorage.getItem('custodian_lang') || 'en';
+
+function setLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem('custodian_lang', lang);
+    // Update button states
+    document.getElementById('lang-en-btn').className = lang === 'en' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    document.getElementById('lang-de-btn').className = lang === 'de' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    // Refresh course list if on learn section
+    if (window.app) {
+        window.app.currentLang = lang;
+        window.app.updateLearningPathsGrid();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COURSE FILTER
+// ─────────────────────────────────────────────────────────────────────────────
+let currentCategoryFilter = 'all';
+
+function filterCourses(category, btn) {
+    currentCategoryFilter = category;
+    // Update button states
+    document.querySelectorAll('#category-filter-bar button').forEach(b => {
+        b.className = 'btn btn-sm btn-outline-info';
+    });
+    if (btn) btn.className = 'btn btn-sm btn-info active';
+    if (window.app) window.app.updateLearningPathsGrid();
+}
 
 // Agent UI Enhancement Data
 const agentUIData = {
@@ -231,34 +248,6 @@ class CustodianAIApp {
         } catch (error) {
             console.error('Error loading agents:', error);
         }
-    }
-
-    updateLearningPathsGrid() {
-        const grid = document.getElementById('learning-paths-grid');
-        if (!grid) return;
-
-        grid.innerHTML = '';
-
-        const createPathCard = (path) => {
-            const card = document.createElement('div');
-            card.className = 'learning-path-card';
-            card.innerHTML = `
-                <div class="path-icon">
-                    <i class="${path.icon} fa-2x"></i>
-                </div>
-                <div class="path-info">
-                    <h4 class="path-title">${path.name}</h4>
-                    <p class="path-description">${path.description}</p>
-                </div>
-                <div class="path-footer">
-                    <button class="btn btn-primary btn-sm">Start Learning</button>
-                </div>
-            `;
-            return card;
-        };
-
-        grid.innerHTML += '<h3>Available Learning Paths</h3>';
-        learningPathData.paths.forEach(path => grid.appendChild(createPathCard(path)));
     }
 
     updateAgentsGrid(agents) {
@@ -698,6 +687,410 @@ class CustodianAIApp {
         
         if (sectionName === 'learn') {
             this.updateLearningPathsGrid();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COURSE NAVIGATION SYSTEM
+    // ─────────────────────────────────────────────────────────────────────────
+
+    async updateLearningPathsGrid() {
+        const grid = document.getElementById('learning-paths-grid');
+        if (!grid) return;
+        grid.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner"></div><p>Loading courses...</p></div>';
+
+        try {
+            const lang = this.currentLang || currentLanguage || 'en';
+            const response = await fetch(`/api/v1/courses?lang=${lang}`, { credentials: 'include' });
+            const data = await response.json();
+            let courses = data.courses || [];
+
+            // Apply category filter
+            if (currentCategoryFilter && currentCategoryFilter !== 'all') {
+                courses = courses.filter(c => c.category === currentCategoryFilter);
+            }
+
+            grid.innerHTML = '';
+            if (courses.length === 0) {
+                grid.innerHTML = '<p class="text-muted text-center py-4">No courses found for the selected filters.</p>';
+                return;
+            }
+
+            // Load user progress
+            let progressMap = {};
+            try {
+                const pResp = await fetch('/api/v1/progress', { credentials: 'include' });
+                if (pResp.ok) {
+                    const pData = await pResp.json();
+                    (pData.progress || []).forEach(p => {
+                        progressMap[`${p.course_id}:${p.lang}`] = p;
+                    });
+                }
+            } catch(e) { /* guest user, no progress */ }
+
+            courses.forEach(course => {
+                const key = `${course.id}:${course.lang}`;
+                const progress = progressMap[key];
+                const completedCount = progress ? (progress.completed_sections || []).length : 0;
+                const totalCount = course.section_count || 1;
+                const pct = Math.round((completedCount / totalCount) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'course-card';
+                card.innerHTML = `
+                    <div class="course-card-icon">
+                        <i class="${course.icon || 'fas fa-book'} fa-2x"></i>
+                    </div>
+                    <div class="course-card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h4 class="course-card-title">${course.title}</h4>
+                            <span class="badge bg-secondary ms-2">${course.lang.toUpperCase()}</span>
+                        </div>
+                        <span class="badge bg-info text-dark mb-2">${course.category}</span>
+                        <p class="course-card-desc">${course.description}</p>
+                        <div class="course-card-meta">
+                            <span><i class="fas fa-layer-group me-1"></i>${course.section_count} modules</span>
+                            <span><i class="fas fa-file-alt me-1"></i>${course.slide_count} slides</span>
+                        </div>
+                        ${completedCount > 0 ? `
+                        <div class="mt-2">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Progress</span><span>${pct}%</span>
+                            </div>
+                            <div class="progress" style="height:4px;">
+                                <div class="progress-bar bg-info" style="width:${pct}%"></div>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                    <div class="course-card-footer">
+                        <button class="btn btn-info btn-sm w-100" onclick="window.app.openCourse('${course.id}', '${course.lang}')">
+                            <i class="fas fa-play me-1"></i> ${completedCount > 0 ? 'Continue' : 'Start'} Learning
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch(e) {
+            console.error('Error loading courses:', e);
+            grid.innerHTML = '<p class="text-danger text-center py-4">Failed to load courses. Please try again.</p>';
+        }
+    }
+
+    async openCourse(courseId, lang) {
+        this.currentCourseId = courseId;
+        this.currentCourseLang = lang;
+        this.currentSectionIndex = 0;
+        this.completedSections = [];
+
+        // Load progress
+        try {
+            const pResp = await fetch('/api/v1/progress', { credentials: 'include' });
+            if (pResp.ok) {
+                const pData = await pResp.json();
+                const prog = (pData.progress || []).find(p => p.course_id === courseId && p.lang === lang);
+                if (prog) {
+                    this.currentSectionIndex = prog.section_index || 0;
+                    this.completedSections = prog.completed_sections || [];
+                }
+            }
+        } catch(e) { /* guest */ }
+
+        // Load course data
+        try {
+            const resp = await fetch(`/api/v1/courses/${courseId}?lang=${lang}`, { credentials: 'include' });
+            const course = await resp.json();
+            this.currentCourse = course;
+
+            // Update sidebar
+            document.getElementById('course-sidebar-title').textContent = course.title;
+            this.renderModuleList(course.sections);
+            this.updateProgressDisplay();
+
+            // Show course detail section
+            await this.showSection('course-detail');
+
+            // Load first/current section
+            await this.loadSection(this.currentSectionIndex);
+        } catch(e) {
+            console.error('Error opening course:', e);
+            alert('Failed to load course. Please try again.');
+        }
+    }
+
+    renderModuleList(sections) {
+        const list = document.getElementById('course-module-list');
+        if (!list) return;
+        list.innerHTML = '';
+        sections.forEach((section, i) => {
+            const isCompleted = this.completedSections.includes(i);
+            const isCurrent = i === this.currentSectionIndex;
+            const item = document.createElement('div');
+            item.className = `course-module-item ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''}`;
+            item.dataset.index = i;
+            item.innerHTML = `
+                <span class="module-status-icon">
+                    ${isCompleted ? '<i class="fas fa-check-circle text-success"></i>' : `<span class="module-number">${i + 1}</span>`}
+                </span>
+                <span class="module-title">${section.title}</span>
+            `;
+            item.addEventListener('click', () => this.loadSection(i));
+            list.appendChild(item);
+        });
+    }
+
+    async loadSection(index) {
+        if (!this.currentCourse) return;
+        const sections = this.currentCourse.sections || [];
+        if (index < 0 || index >= sections.length) return;
+
+        this.currentSectionIndex = index;
+        const section = sections[index];
+
+        // Update header
+        document.getElementById('course-section-title').textContent = section.title;
+        document.getElementById('course-lang-badge').textContent = (this.currentCourseLang || 'en').toUpperCase();
+        document.getElementById('course-section-badge').textContent = `${index + 1} / ${sections.length}`;
+
+        // Update nav buttons
+        document.getElementById('prev-section-btn').disabled = index === 0;
+        document.getElementById('next-section-btn').disabled = index === sections.length - 1;
+
+        // Update mark complete button
+        const isCompleted = this.completedSections.includes(index);
+        const markBtn = document.getElementById('mark-complete-btn');
+        if (markBtn) {
+            markBtn.innerHTML = isCompleted
+                ? '<i class="fas fa-check-circle me-1"></i> Completed'
+                : '<i class="fas fa-check me-1"></i> Mark Complete';
+            markBtn.className = isCompleted ? 'btn btn-sm btn-success' : 'btn btn-sm btn-outline-info';
+        }
+
+        // Load slide content
+        const contentEl = document.getElementById('course-slide-content');
+        contentEl.innerHTML = '<div class="text-center py-4"><div class="spinner"></div></div>';
+
+        try {
+            const resp = await fetch(`/api/v1/courses/${this.currentCourseId}/slides/${this.currentCourseLang}/${index}`, { credentials: 'include' });
+            const data = await resp.json();
+            const md = data.content || '*No content available for this section.*';
+            if (typeof marked !== 'undefined') {
+                contentEl.innerHTML = marked.parse(md);
+                // Apply syntax highlighting
+                contentEl.querySelectorAll('pre code').forEach(block => {
+                    if (typeof hljs !== 'undefined') hljs.highlightElement(block);
+                });
+                // Add run buttons to code blocks
+                contentEl.querySelectorAll('pre').forEach(pre => {
+                    const code = pre.querySelector('code');
+                    if (code) {
+                        const runBtn = document.createElement('button');
+                        runBtn.className = 'run-code-btn';
+                        runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+                        runBtn.onclick = () => {
+                            // Open terminal with the code pre-populated
+                            this.openCourseTerminal(code.textContent);
+                        };
+                        pre.style.position = 'relative';
+                        pre.appendChild(runBtn);
+                    }
+                });
+            } else {
+                contentEl.innerHTML = `<pre>${md}</pre>`;
+            }
+        } catch(e) {
+            contentEl.innerHTML = '<p class="text-danger">Failed to load slide content.</p>';
+        }
+
+        // Update module list highlight
+        this.renderModuleList(sections);
+        this.updateProgressDisplay();
+
+        // Save progress to backend
+        this.saveProgress();
+    }
+
+    navigateSection(delta) {
+        const sections = this.currentCourse ? this.currentCourse.sections : [];
+        const newIndex = this.currentSectionIndex + delta;
+        if (newIndex >= 0 && newIndex < sections.length) {
+            this.loadSection(newIndex);
+        }
+    }
+
+    markSectionComplete() {
+        if (!this.completedSections.includes(this.currentSectionIndex)) {
+            this.completedSections.push(this.currentSectionIndex);
+        }
+        this.renderModuleList(this.currentCourse.sections);
+        this.updateProgressDisplay();
+        this.saveProgress();
+
+        // Update button
+        const markBtn = document.getElementById('mark-complete-btn');
+        if (markBtn) {
+            markBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Completed';
+            markBtn.className = 'btn btn-sm btn-success';
+        }
+
+        // Auto-advance to next section
+        const sections = this.currentCourse.sections || [];
+        if (this.currentSectionIndex < sections.length - 1) {
+            setTimeout(() => this.navigateSection(1), 800);
+        }
+    }
+
+    updateProgressDisplay() {
+        const sections = this.currentCourse ? this.currentCourse.sections : [];
+        const total = sections.length;
+        const completed = this.completedSections.length;
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        const pctEl = document.getElementById('course-progress-pct');
+        const fillEl = document.getElementById('course-progress-fill');
+        const completedEl = document.getElementById('course-completed-count');
+        const totalEl = document.getElementById('course-total-count');
+
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+        if (completedEl) completedEl.textContent = completed;
+        if (totalEl) totalEl.textContent = total;
+    }
+
+    async saveProgress() {
+        try {
+            await fetch('/api/v1/progress', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    course_id: this.currentCourseId,
+                    lang: this.currentCourseLang || 'en',
+                    section_index: this.currentSectionIndex,
+                    completed_sections: this.completedSections
+                })
+            });
+        } catch(e) { /* guest user, ignore */ }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COURSE TERMINAL
+    // ─────────────────────────────────────────────────────────────────────────
+
+    async runCourseCode() {
+        const code = document.getElementById('course-code-input').value.trim();
+        if (!code) return;
+        const outputEl = document.getElementById('course-terminal-output');
+        outputEl.innerHTML = '<span class="text-muted"><div class="spinner small d-inline-block"></div> Running...</span>';
+
+        try {
+            const resp = await fetch('/api/v1/execute-code', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, language: 'python' })
+            });
+            const data = await resp.json();
+            if (data.error) {
+                outputEl.innerHTML = `<span class="text-danger"><strong>Error:</strong><br><pre>${data.error}</pre></span>`;
+            } else {
+                outputEl.innerHTML = `<span class="text-success"><strong>Output:</strong><br><pre>${data.output || '(No output)'}</pre></span>`;
+            }
+        } catch(e) {
+            outputEl.innerHTML = `<span class="text-danger">Execution failed: ${e.message}</span>`;
+        }
+    }
+
+    clearCourseTerminal() {
+        document.getElementById('course-code-input').value = '';
+        document.getElementById('course-terminal-output').innerHTML = '<span class="text-muted">Output will appear here...</span>';
+    }
+
+    openCourseTerminal(code) {
+        const terminalSection = document.getElementById('course-terminal-section');
+        const toggleBar = document.getElementById('course-terminal-toggle-bar');
+        const chevron = document.getElementById('terminal-chevron');
+        const body = document.getElementById('course-terminal-body');
+        if (terminalSection) terminalSection.style.display = 'block';
+        if (toggleBar) toggleBar.style.display = 'none';
+        if (body) body.style.display = 'block';
+        if (chevron) { chevron.className = 'fas fa-chevron-up'; }
+        if (code !== undefined && code !== null) {
+            const input = document.getElementById('course-code-input');
+            if (input) input.value = code;
+        }
+        // Scroll to terminal
+        if (terminalSection) terminalSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    toggleCourseTerminal() {
+        const terminalSection = document.getElementById('course-terminal-section');
+        const toggleBar = document.getElementById('course-terminal-toggle-bar');
+        const chevron = document.getElementById('terminal-chevron');
+        const body = document.getElementById('course-terminal-body');
+        if (!body) return;
+        const isOpen = body.style.display !== 'none';
+        if (isOpen) {
+            body.style.display = 'none';
+            if (chevron) chevron.className = 'fas fa-chevron-down';
+        } else {
+            body.style.display = 'block';
+            if (chevron) chevron.className = 'fas fa-chevron-up';
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COURSE AI TUTOR
+    // ─────────────────────────────────────────────────────────────────────────
+
+    openCourseAIAssist() {
+        const panel = document.getElementById('course-ai-panel');
+        if (panel) panel.style.display = 'flex';
+    }
+
+    closeCourseAIPanel() {
+        const panel = document.getElementById('course-ai-panel');
+        if (panel) panel.style.display = 'none';
+    }
+
+    async sendCourseAIMessage() {
+        const input = document.getElementById('course-ai-input');
+        const message = input ? input.value.trim() : '';
+        if (!message) return;
+
+        const messagesEl = document.getElementById('course-ai-messages');
+        // Add user message
+        messagesEl.innerHTML += `<div class="course-ai-msg user-msg"><strong>You:</strong> ${message}</div>`;
+        input.value = '';
+        messagesEl.innerHTML += `<div class="course-ai-msg agent-msg" id="ai-typing"><i class="fas fa-robot me-1"></i><em>Thinking...</em></div>`;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        const code = document.getElementById('course-code-input') ? document.getElementById('course-code-input').value : '';
+
+        try {
+            const resp = await fetch('/api/v1/chat/course', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message,
+                    course_id: this.currentCourseId || null,
+                    lang: this.currentCourseLang || 'en',
+                    section_index: this.currentSectionIndex || 0,
+                    code: code || null
+                })
+            });
+            const data = await resp.json();
+            const typingEl = document.getElementById('ai-typing');
+            if (typingEl) typingEl.remove();
+
+            const content = data.agent_response ? data.agent_response.content : 'Sorry, I could not get a response.';
+            const parsedContent = typeof marked !== 'undefined' ? marked.parse(content) : content;
+            messagesEl.innerHTML += `<div class="course-ai-msg agent-msg markdown-body"><i class="fas fa-robot me-1 text-info"></i>${parsedContent}</div>`;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        } catch(e) {
+            const typingEl = document.getElementById('ai-typing');
+            if (typingEl) typingEl.remove();
+            messagesEl.innerHTML += `<div class="course-ai-msg agent-msg text-danger">Error: ${e.message}</div>`;
         }
     }
 
