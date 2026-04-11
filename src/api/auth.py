@@ -105,6 +105,16 @@ def delete_session_from_db(session_id: str):
         print(f"Error deleting session from DB: {e}")
 
 # Authentication dependency for reusable authentication
+class User(BaseModel):
+    """User model for authenticated users."""
+    id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+# Authentication dependency for reusable authentication
 async def get_current_user_from_cookies(
     session_id: Optional[str] = Cookie(None),
     access_token: Optional[str] = Cookie(None)
@@ -149,14 +159,6 @@ async def get_current_user_from_cookies(
         )
 
     return user
-
-class User(BaseModel):
-    """User model for authenticated users."""
-    id: str
-    email: str
-    name: str
-    picture: Optional[str] = None
-    created_at: Optional[datetime] = None
 
 class TokenResponse(BaseModel):
     """Response model for token generation."""
