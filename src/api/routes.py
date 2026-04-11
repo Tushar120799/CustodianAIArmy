@@ -2,7 +2,7 @@
 API Routes for Custodian AI Army
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 import subprocess
 from typing import Dict, Any, List, Optional
@@ -14,6 +14,7 @@ from src.agents.agent_manager import AgentManager
 from src.core.database import get_chats_for_user, save_chat_session
 from src.agents.base_agent import AgentMessage
 from src.core.logging_config import get_logger
+from src.api.auth import get_current_user_from_cookies, User
 
 # Initialize router and logger
 router = APIRouter()
@@ -284,10 +285,14 @@ async def get_main_agents():
 
 @router.post("/chat")
 async def chat_with_agent(
-    request: ChatRequest
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
 ):
     """Chat with a specific agent or let the system choose the best one"""
     try:
+        # Log security event - user is authenticated
+        logger.info(f"Authenticated chat request from user: {current_user.email} (ID: {current_user.id})")
+
         # Find the target agent
         target_agent = None
         
@@ -321,6 +326,11 @@ async def chat_with_agent(
                 "specialization": getattr(target_agent, 'specialization', None),
                 "timestamp": response.timestamp.isoformat(),
                 "metadata": response.metadata
+            },
+            "user_info": {
+                "user_id": current_user.id,
+                "user_email": current_user.email,
+                "user_name": current_user.name
             }
         }
         

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classic UI Test</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/custom.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .test-section {
+            margin-bottom: 3rem;
+        }
+
+        .test-section h2 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            font-family: 'Orbitron', monospace;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .test-card {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .test-card:hover {
+            border-color: var(--primary-color);
+        }
+
+        .test-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-direction: column;
+            max-width: 250px;
+        }
+
+        .test-nav-item {
+            padding: 1rem;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .test-nav-item:hover {
+            background: var(--tertiary-bg);
+            border-color: var(--primary-color);
+        }
+
+        .test-nav-item.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Classic UI Test</h1>
+        <p>Testing the simplified, non-glowing UI components</p>
+
+        <div class="test-section">
+            <h2>Buttons</h2>
+            <div class="test-buttons">
+                <button class="action-btn">
+                    <i class="fas fa-rocket"></i> Action Button
+                </button>
+                <button class="submit-btn">
+                    <i class="fas fa-paper-plane"></i> Submit
+                </button>
+                <button id="send-btn">
+                    <i class="fas fa-send"></i> Send
+                </button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Cards</h2>
+            <div class="test-card">
+                <h3>Dashboard Card</h3>
+                <p>This is a test card with hover effect (border color change only)</p>
+            </div>
+
+            <div class="test-card">
+                <h3>Agent Card</h3>
+                <p>Agent cards should have simple border hover effects</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Navigation</h2>
+            <div class="test-nav">
+                <div class="test-nav-item active">
+                    <i class="fas fa-brain"></i> Active Item
+                </div>
+                <div class="test-nav-item">
+                    <i class="fas fa-rocket"></i> Hover Item
+                </div>
+                <div class="test-nav-item">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Agent Status Button</h2>
+            <div class="agent-status-btn" style="position: relative; display: inline-block;">
+                <i class="fas fa-robot"></i>
+            </div>
+            <p>Should have simple color change on hover, no glow or animation</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Learning Path Card</h2>
+            <div class="learning-path-card" style="max-width: 300px;">
+                <div class="path-icon">
+                    <i class="fas fa-graduation-cap fa-2x"></i>
+                </div>
+                <h3 class="path-title">Test Path</h3>
+                <p class="path-description">This is a test learning path with simple hover effects.</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Color Palette</h2>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <div style="width: 100px; height: 100px; background: var(--primary-bg); border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center;">Primary BG</div>
+                <div style="width: 100px; height: 100px; background: var(--secondary-bg); border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center;">Secondary BG</div>
+                <div style="width: 100px; height: 100px; background: var(--primary-color); border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">Primary</div>
+                <div style="width: 100px; height: 100px; background: var(--success-color); border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white;">Success</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

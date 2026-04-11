@@ -14,11 +14,141 @@ import httpx
 import jwt
 
 from ..core.config import settings
+from ..core.database import init_db, get_db
+import sqlite3
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
 # In-memory session store (use Redis in production)
 sessions: Dict[str, Dict[str, Any]] = {}
+
+# Initialize persistent session storage
+def init_session_storage():
+    """Initialize database table for persistent sessions"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                user_email TEXT NOT NULL,
+                user_name TEXT,
+                user_picture TEXT,
+                created_at TEXT NOT NULL,
+                last_activity TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error initializing session storage: {e}")
+
+# Load sessions from database on startup
+def load_sessions_from_db():
+    """Load sessions from persistent storage into memory"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM sessions')
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            sessions[row[0]] = {
+                "user": {
+                    "id": row[1],
+                    "email": row[2],
+                    "name": row[3],
+                    "picture": row[4]
+                },
+                "created_at": row[5],
+                "last_activity": row[6]
+            }
+    except Exception as e:
+        print(f"Error loading sessions from DB: {e}")
+
+# Save session to persistent storage
+def save_session_to_db(session_id: str, user_data: Dict[str, Any]):
+    """Save session to persistent storage"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO sessions
+            (session_id, user_id, user_email, user_name, user_picture, created_at, last_activity)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session_id,
+            user_data["id"],
+            user_data["email"],
+            user_data.get("name"),
+            user_data.get("picture"),
+            datetime.utcnow().isoformat(),
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error saving session to DB: {e}")
+
+# Delete session from persistent storage
+def delete_session_from_db(session_id: str):
+    """Delete session from persistent storage"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error deleting session from DB: {e}")
+
+# Authentication dependency for reusable authentication
+async def get_current_user_from_cookies(
+    session_id: Optional[str] = Cookie(None),
+    access_token: Optional[str] = Cookie(None)
+) -> User:
+    """
+    Dependency to get the current authenticated user from cookies.
+    Used for protecting API endpoints that require authentication.
+
+    Args:
+        session_id: Session cookie
+        access_token: JWT token cookie
+
+    Returns:
+        Authenticated User object
+
+    Raises:
+        HTTPException: 401 if user is not authenticated
+    """
+    user = None
+
+    # Try to get user from session first
+    if session_id:
+        user = get_user_from_session(session_id)
+
+    # If no session, try JWT token
+    if not user and access_token:
+        payload = decode_jwt_token(access_token)
+        if payload:
+            user = User(
+                id=payload["sub"],
+                email=payload["email"],
+                name=payload["name"],
+                picture=payload.get("picture"),
+                created_at=datetime.utcnow()
+            )
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    return user
 
 class User(BaseModel):
     """User model for authenticated users."""
@@ -83,39 +213,75 @@ def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
 def create_user_session(user: User) -> str:
     """
     Create a new user session and return session ID.
-    
+
     Args:
         user: User object
-        
+
     Returns:
         Session ID
     """
     session_id = secrets.token_urlsafe(32)
+    user_data = user.dict()
     sessions[session_id] = {
-        "user": user.dict(),
+        "user": user_data,
         "created_at": datetime.utcnow(),
         "last_activity": datetime.utcnow()
     }
+
+    # Also save to persistent storage
+    save_session_to_db(session_id, user_data)
     return session_id
 
 def get_user_from_session(session_id: str) -> Optional[User]:
     """
     Retrieve user from session.
-    
+
     Args:
         session_id: Session identifier
-        
+
     Returns:
         User object or None if session invalid/expired
     """
-    if session_id not in sessions:
-        return None
-    
-    session = sessions[session_id]
-    session["last_activity"] = datetime.utcnow()
-    
-    # No session expiration - persistent until logout
-    return User(**session["user"])
+    # Check memory first
+    if session_id in sessions:
+        session = sessions[session_id]
+        session["last_activity"] = datetime.utcnow()
+        return User(**session["user"])
+
+    # If not in memory, try to load from persistent storage
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM sessions WHERE session_id = ?', (session_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            # Recreate session in memory
+            sessions[session_id] = {
+                "user": {
+                    "id": row[1],
+                    "email": row[2],
+                    "name": row[3],
+                    "picture": row[4]
+                },
+                "created_at": row[5],
+                "last_activity": datetime.utcnow().isoformat()
+            }
+            return User(
+                id=row[1],
+                email=row[2],
+                name=row[3],
+                picture=row[4]
+            )
+    except Exception as e:
+        print(f"Error loading session from DB: {e}")
+
+    return None
+
+# Initialize persistent session storage on import
+init_session_storage()
+load_sessions_from_db()
 
 @router.get("/google")
 async def google_login():
@@ -312,6 +478,10 @@ async def logout(
     # Clear session from memory
     if session_id and session_id in sessions:
         del sessions[session_id]
+
+    # Also clear from persistent storage
+    if session_id:
+        delete_session_from_db(session_id)
     
     response = JSONResponse(
         status_code=200,

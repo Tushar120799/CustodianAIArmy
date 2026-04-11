@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"><link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
 </head>
-<body style="padding-top: 80px;"> <!-- Add padding to body to offset fixed header -->
+<body style="padding-top: 60px;"> <!-- Add padding to body to offset fixed header -->
 
     <!-- Dismissible Auth Modal -->
     <div class="modal fade" id="authModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
@@ -41,7 +41,7 @@
     <div class="app-container" id="main-app-container">
         <!-- Header -->
         <header class="header fixed-top">
-            <div class="header-content container-fluid d-flex align-items-center justify-content-between px-3 py-2 flex-wrap">
+            <div class="header-content container-fluid d-flex align-items-center justify-content-between px-2 py-1">
                 <!-- Left side: Burger and Logo -->
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn btn-icon-only text-info p-0" id="hamburger-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas" aria-label="Open menu">
@@ -56,7 +56,7 @@
                 </div>
     
                 <!-- Right side: Stats & Profile -->
-                <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="d-flex align-items-center gap-2">
                     <div class="header-stats d-flex gap-2 gap-md-3 d-none d-md-flex">
                         <div class="stat-item text-center">
                             <span class="stat-label d-block">Active Agents</span>
@@ -74,9 +74,8 @@
                     
                     <!-- User Profile Dropdown -->
                     <div class="dropdown">
-                        <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2" style="color: var(--accent-cyan);" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img id="user-profile-img" src="https://i.imgur.com/fC3C6gI.png" alt="Profile" class="rounded-circle" width="36" height="36" style="border: 2px solid var(--accent-cyan); object-fit: cover;">
-                            <span id="user-profile-name" class="d-none d-md-inline fw-bold">Guest</span>
+                        <button class="btn btn-icon-only text-info p-0 dropdown-toggle" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle fa-lg"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userProfileDropdown" style="background: var(--gradient-dark); border: 1px solid var(--accent-cyan);">
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i> Edit Details</a></li>
@@ -85,6 +84,16 @@
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Dark Mode Toggle -->
+            <div class="dark-mode-container px-3 py-1 text-end">
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="darkModeToggle">
+                    <label class="form-check-label" for="darkModeToggle">
+                        <i class="fas fa-moon"></i>
+                    </label>
                 </div>
             </div>
         </header>
@@ -165,7 +174,7 @@
                                 </div>
                             </div>
                             <div class="chat-input-container">
-                                <button id="change-agent-btn" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#agentSelectModal" disabled>
+                                <button id="change-agent-btn" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#agentSelectModal">
                                     <i class="fas fa-users"></i>
                                 </button>
                                 <textarea id="chat-input" placeholder="Type your message..." disabled rows="1"></textarea>
@@ -537,6 +546,32 @@
 
         document.getElementById('chatHistoryModal').addEventListener('show.bs.modal', loadChatHistory);
 
+        // Dark Mode Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const htmlElement = document.documentElement;
+
+            // Check for saved preference or use system preference
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                htmlElement.setAttribute('data-theme', 'dark');
+                darkModeToggle.checked = true;
+            }
+
+            // Toggle dark mode
+            darkModeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    htmlElement.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    htmlElement.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+        });
+
         // Add MCP Server handler
         function addMcpServer() {
             const name = document.getElementById('mcpName').value;
@@ -548,14 +583,4 @@
     </script>
 
 </file_content>
-<task_progress>
-- [x] Analyze current routes.py implementation
-- [x] Analyze current frontend JavaScript implementation
-- [x] Analyze current HTML structure and authentication flow
-- [x] Review Vercel configuration
-- [x] Review environment variables
-- [x] Create backend Google OAuth authentication routes
-- [x] Update frontend to use backend authentication instead of Vercel
-- [ ] Test the authentication flow
-</task_progress>
 </write_to_file>
