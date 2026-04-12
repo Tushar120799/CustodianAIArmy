@@ -292,10 +292,17 @@ async def get_main_agents():
     }
 
 @router.post("/chat/guest")
-async def guest_chat(request: ChatRequest):
+async def guest_chat(chat_request: ChatRequest, request: Request):
     """Guest chat — NIM only, 3 requests/day, no auth required"""
-    guest_email = "guest@custodian.ai"
-    rate = check_and_increment_rate_limit(guest_email)
+    # Use per-IP identifier so each device gets its own 3-request counter
+    # Check X-Forwarded-For first (for reverse proxies / Vercel), fall back to direct client IP
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown"
+    guest_identifier = f"guest_{client_ip}"
+    rate = check_and_increment_rate_limit(guest_identifier)
     if not rate["allowed"]:
         return {
             "agent_response": {
@@ -317,10 +324,10 @@ async def guest_chat(request: ChatRequest):
     # Force NIM for guests
     if agent_manager.active_provider != "nim":
         agent_manager.switch_provider("nim")
-    agent_name = request.agent_name or "CustodianAI"
+    agent_name = chat_request.agent_name or "CustodianAI"
     target = agent_manager.get_agent_by_name(agent_name)
-    if not target and request.agent_id:
-        target = agent_manager.get_agent(request.agent_id)
+    if not target and chat_request.agent_id:
+        target = agent_manager.get_agent(chat_request.agent_id)
     if not target:
         target = next(iter(agent_manager.main_agents.values()), None)
     if not target:
@@ -328,7 +335,7 @@ async def guest_chat(request: ChatRequest):
     msg = AgentMessage(
         sender_id="guest",
         receiver_id=target.agent_id,
-        content=request.message,
+        content=chat_request.message,
         message_type="chat"
     )
     response = await agent_manager.send_message(msg)
@@ -867,6 +874,7 @@ Slide Content:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class UserApiKeysRequest(BaseModel):
+    groq_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     nim_api_key: Optional[str] = None
@@ -922,7 +930,7 @@ async def switch_provider(
     current_user: User = Depends(get_current_user_from_cookies)
 ):
     """Switch the active AI provider for all agents globally."""
-    valid_providers = ["gemini", "anthropic", "nim"]
+    valid_providers = ["groq", "gemini", "anthropic", "nim"]
     if request.provider not in valid_providers:
         raise HTTPException(
             status_code=400,
@@ -952,7 +960,7 @@ async def get_active_provider():
     """Get the currently active AI provider."""
     return {
         "active_provider": agent_manager.active_provider,
-        "available_providers": ["gemini", "anthropic", "nim"]
+        "available_providers": ["groq", "gemini", "anthropic", "nim"]
     }
 
 

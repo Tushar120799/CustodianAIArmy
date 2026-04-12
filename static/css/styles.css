@@ -452,6 +452,12 @@ body {
     overflow: hidden;
 }
 
+@media (max-width: 900px) {
+    .chat-container {
+        height: calc(100vh - 157px);
+    }
+}
+
 .chat-container-desktop {
     flex-direction: column;
 }

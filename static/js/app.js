@@ -1623,6 +1623,7 @@ window.loadApiKeys = async function() {
         var keys = data.keys || {};
 
         var providers = [
+            { field: 'groq_api_key',      statusEl: 'groq-key-status',      inputEl: 'groq-key-input',      placeholder: 'gsk_...' },
             { field: 'gemini_api_key',    statusEl: 'gemini-key-status',    inputEl: 'gemini-key-input',    placeholder: 'AIza...' },
             { field: 'anthropic_api_key', statusEl: 'anthropic-key-status', inputEl: 'anthropic-key-input', placeholder: 'sk-ant-...' },
             { field: 'nim_api_key',       statusEl: 'nim-key-status',       inputEl: 'nim-key-input',       placeholder: 'nvapi-...' }
@@ -1660,8 +1661,8 @@ window.loadApiKeys = async function() {
  * @param {string} provider - 'gemini' | 'anthropic' | 'nim'
  */
 window.saveApiKey = async function(provider) {
-    var inputMap = { gemini: 'gemini-key-input', anthropic: 'anthropic-key-input', nim: 'nim-key-input' };
-    var fieldMap = { gemini: 'gemini_api_key', anthropic: 'anthropic_api_key', nim: 'nim_api_key' };
+    var inputMap = { groq: 'groq-key-input', gemini: 'gemini-key-input', anthropic: 'anthropic-key-input', nim: 'nim-key-input' };
+    var fieldMap = { groq: 'groq_api_key', gemini: 'gemini_api_key', anthropic: 'anthropic_api_key', nim: 'nim_api_key' };
 
     var inputEl = document.getElementById(inputMap[provider]);
     var keyValue = inputEl ? inputEl.value.trim() : '';
@@ -1834,14 +1835,16 @@ function _getAgentProvider(agent) {
     const name = agent.name || '';
     if (name.startsWith('NIM-')) return 'nim';
     if (name.startsWith('Claude-') || name === 'ClaudeCode-AI') return 'anthropic';
-    // Default Gemini agents have no prefix
-    return 'gemini';
+    // All agents are now Groq by default (primary provider)
+    // Groq agents have no special prefix — they use the same names as before
+    return 'groq';
 }
 
 const _providerMeta = {
-    gemini:    { label: 'Google Gemini',   badgeClass: 'bg-info text-dark',    icon: 'fab fa-google',   cardId: 'gemini-provider-card' },
-    anthropic: { label: 'Anthropic Claude', badgeClass: 'bg-warning text-dark', icon: 'fas fa-brain',    cardId: 'anthropic-provider-card' },
-    nim:       { label: 'NVIDIA NIM',       badgeClass: 'bg-success text-dark', icon: 'fas fa-microchip', cardId: 'nim-provider-card' }
+    groq:      { label: 'Groq (Llama)',     badgeClass: 'bg-success text-dark', icon: 'fas fa-bolt',      cardId: 'groq-provider-card' },
+    gemini:    { label: 'Google Gemini',    badgeClass: 'bg-info text-dark',    icon: 'fab fa-google',    cardId: 'gemini-provider-card' },
+    anthropic: { label: 'Anthropic Claude', badgeClass: 'bg-warning text-dark', icon: 'fas fa-brain',     cardId: 'anthropic-provider-card' },
+    nim:       { label: 'NVIDIA NIM',       badgeClass: 'bg-secondary',         icon: 'fas fa-microchip', cardId: 'nim-provider-card' }
 };
 
 /**

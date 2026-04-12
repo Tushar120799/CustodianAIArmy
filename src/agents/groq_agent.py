@@ -1,8 +1,8 @@
 """
-NVIDIA NIM Agent implementation
-Uses NVIDIA's NIM API (OpenAI-compatible) for free/open-source model inference.
-Supports Llama 3.3 70B, Qwen 2.5 Coder, Mistral Large, and other NIM-hosted models.
-Get your free API key at: https://build.nvidia.com
+Groq Agent implementation
+Uses Groq's API (OpenAI-compatible) for ultra-fast, free inference.
+Supports Llama 3.3 70B, Llama 4, Mixtral, Gemma, and other Groq-hosted models.
+Get your FREE API key at: https://console.groq.com (no credit card required)
 
 MCP Tool Calling:
   Each agent specialization has a set of MCP tools available (web search,
@@ -23,8 +23,8 @@ from src.core.logging_config import get_logger
 # Directory where prompt .md files are stored
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
-NIM_API_BASE_URL = "https://integrate.api.nvidia.com/v1"
-NIM_DEFAULT_MODEL = "meta/llama-3.3-70b-instruct"
+GROQ_API_BASE_URL = "https://api.groq.com/openai/v1"
+GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 # Maximum tool-calling iterations to prevent infinite loops
 MAX_TOOL_ITERATIONS = 5
@@ -44,13 +44,13 @@ def _load_prompt(filename: str) -> str:
         return ""
 
 
-class NIMAgent(BaseAgent):
-    """Agent powered by NVIDIA NIM API (OpenAI-compatible, free tier available)"""
+class GroqAgent(BaseAgent):
+    """Agent powered by Groq's ultra-fast inference API (free tier available)"""
 
     def __init__(
         self,
         agent_id: str = None,
-        name: str = "NIMAgent",
+        name: str = "GroqAgent",
         agent_type: AgentType = AgentType.MAIN,
         specialization: str = "general",
         capabilities: List[AgentCapability] = None,
@@ -60,18 +60,23 @@ class NIMAgent(BaseAgent):
         default_capabilities = [
             AgentCapability(
                 name="text_generation",
-                description="Generate human-like text responses using NVIDIA NIM models",
-                parameters={"max_tokens": 2048, "temperature": 0.7}
+                description="Generate human-like text responses using Groq-hosted open-source models",
+                parameters={"max_tokens": 4096, "temperature": 0.7}
             ),
             AgentCapability(
                 name="conversation",
-                description="Engage in natural conversations with open-source LLMs",
-                parameters={"context_window": 8192}
+                description="Engage in natural, fast conversations powered by Llama and other open models",
+                parameters={"context_window": 32768}
             ),
             AgentCapability(
                 name="code_generation",
-                description="Generate and explain code using powerful open-source models",
-                parameters={"timeout": 60}
+                description="Generate and explain code using powerful open-source models at high speed",
+                parameters={"timeout": 30}
+            ),
+            AgentCapability(
+                name="reasoning",
+                description="Advanced reasoning using Llama 3.3 70B and Llama 4 models",
+                parameters={"extended_thinking": False}
             ),
             AgentCapability(
                 name="tool_use",
@@ -95,15 +100,15 @@ class NIMAgent(BaseAgent):
         # Lazy-initialized MCP tool executor
         self._mcp_executor = None
 
-        self.logger.info(f"NIMAgent {self.name} initialized with specialization: {specialization}")
+        self.logger.info(f"GroqAgent {self.name} initialized with specialization: {specialization}")
 
     def _get_api_key(self) -> str:
         """Get the effective API key (user override > server default)"""
-        return self._api_key_override or settings.NIM_API_KEY or ""
+        return self._api_key_override or settings.GROQ_API_KEY or ""
 
     def _get_model(self) -> str:
         """Get the effective model name"""
-        return self._model_override or settings.NIM_MODEL or NIM_DEFAULT_MODEL
+        return self._model_override or settings.GROQ_MODEL or GROQ_DEFAULT_MODEL
 
     def _get_mcp_executor(self):
         """Get or create the MCP tool executor for this agent's specialization."""
@@ -119,7 +124,7 @@ class NIMAgent(BaseAgent):
         return self._mcp_executor
 
     async def process_message(self, message: AgentMessage) -> AgentMessage:
-        """Process an incoming message using NVIDIA NIM"""
+        """Process an incoming message using Groq"""
         try:
             self.update_status(AgentStatus.BUSY)
 
@@ -140,11 +145,11 @@ class NIMAgent(BaseAgent):
                     receiver_id=message.sender_id,
                     content=response_content,
                     message_type="text",
-                    metadata={"original_message_id": message.id, "delegated_task": True, "provider": "nvidia_nim"}
+                    metadata={"original_message_id": message.id, "delegated_task": True, "provider": "groq"}
                 )
 
             system_prompt = self._get_system_prompt()
-            response = await self._call_nim_api(
+            response = await self._call_groq_api(
                 system_prompt=system_prompt,
                 user_message=message.content,
                 context=message.metadata.get("context", {}),
@@ -159,7 +164,7 @@ class NIMAgent(BaseAgent):
                 metadata={
                     "original_message_id": message.id,
                     "agent_specialization": self.specialization,
-                    "provider": "nvidia_nim",
+                    "provider": "groq",
                     "model": self._get_model(),
                     "processing_time": (datetime.utcnow() - message.timestamp).total_seconds()
                 }
@@ -178,7 +183,7 @@ class NIMAgent(BaseAgent):
             )
 
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a specific task using NVIDIA NIM"""
+        """Execute a specific task using Groq"""
         try:
             self.update_status(AgentStatus.BUSY)
             task_type = task.get("type", "general")
@@ -186,7 +191,7 @@ class NIMAgent(BaseAgent):
             task_parameters = task.get("parameters", {})
 
             system_prompt = self._get_task_prompt(task_type)
-            response = await self._call_nim_api(
+            response = await self._call_groq_api(
                 system_prompt=system_prompt,
                 user_message=task_description,
                 context=task_parameters,
@@ -199,7 +204,7 @@ class NIMAgent(BaseAgent):
                 "agent_name": self.name,
                 "execution_time": datetime.utcnow().isoformat(),
                 "specialization": self.specialization,
-                "provider": "nvidia_nim",
+                "provider": "groq",
                 "model": self._get_model()
             }
             self.update_status(AgentStatus.IDLE)
@@ -240,13 +245,13 @@ class NIMAgent(BaseAgent):
             if loaded:
                 return loaded
         fallbacks = {
-            "general": "You are a helpful AI assistant powered by NVIDIA NIM. Provide accurate, helpful, and engaging responses.",
-            "analyst": "You are a data analyst AI powered by NVIDIA NIM. Focus on analytical thinking, data interpretation, and insights.",
-            "creative": "You are a creative AI assistant powered by NVIDIA NIM. Focus on creative writing, brainstorming, and innovative solutions.",
-            "technical": "You are a technical AI assistant powered by NVIDIA NIM. Focus on technical accuracy, problem-solving, and detailed explanations.",
-            "researcher": "You are a research AI assistant powered by NVIDIA NIM. Focus on thorough research, fact-checking, and comprehensive analysis.",
-            "tutor": "You are an expert, encouraging programming tutor powered by NVIDIA NIM. Help students learn programming concepts clearly and effectively.",
-            "coordinator": "You are Custodian AI — an intelligent orchestrator powered by NVIDIA NIM. Adopt the persona of the best expert and answer the user's question directly.",
+            "general": "You are a helpful AI assistant powered by Groq. Provide accurate, helpful, and engaging responses.",
+            "analyst": "You are a data analyst AI powered by Groq. Focus on analytical thinking, data interpretation, and actionable insights.",
+            "creative": "You are a creative AI assistant powered by Groq. Focus on creative writing, brainstorming, and innovative solutions.",
+            "technical": "You are a technical AI assistant powered by Groq. Focus on technical accuracy, problem-solving, and detailed explanations.",
+            "researcher": "You are a research AI assistant powered by Groq. Focus on thorough research, fact-checking, and comprehensive analysis.",
+            "tutor": "You are an expert, encouraging programming tutor powered by Groq. Help students learn programming concepts clearly and effectively.",
+            "coordinator": "You are Custodian AI — an intelligent orchestrator powered by Groq. Adopt the persona of the best expert and answer the user's question directly.",
         }
         return fallbacks.get(self.specialization, fallbacks["general"])
 
@@ -273,7 +278,7 @@ class NIMAgent(BaseAgent):
         }
         return fallbacks.get(task_type, self._get_system_prompt())
 
-    async def _call_nim_api(
+    async def _call_groq_api(
         self,
         system_prompt: str,
         user_message: str,
@@ -281,17 +286,17 @@ class NIMAgent(BaseAgent):
         history: list = None
     ) -> str:
         """
-        Call the NVIDIA NIM API (OpenAI-compatible) with MCP tool calling support.
+        Call the Groq API with MCP tool calling support.
 
         Implements an agentic loop:
-        1. Send message to NIM with available tool definitions
+        1. Send message to Groq with available tool definitions
         2. If model requests tool calls → execute via MCP → feed results back
         3. Repeat until model returns a final text response (or max iterations)
         """
         api_key = self._get_api_key()
         if not api_key:
             raise ValueError(
-                "NIM_API_KEY not configured. Get your free key at https://build.nvidia.com"
+                "GROQ_API_KEY not configured. Get your free key at https://console.groq.com"
             )
 
         model = self._get_model()
@@ -313,7 +318,7 @@ class NIMAgent(BaseAgent):
             "Content-Type": "application/json"
         }
 
-        # Get MCP tool definitions for this agent (OpenAI-compatible format)
+        # Get MCP tool definitions for this agent
         mcp_executor = self._get_mcp_executor()
         tool_definitions = []
         if mcp_executor:
@@ -326,7 +331,7 @@ class NIMAgent(BaseAgent):
                 "messages": messages,
                 "temperature": 0.7,
                 "top_p": 1.0,
-                "max_tokens": 2048,
+                "max_tokens": 4096,
                 "stream": False
             }
 
@@ -338,7 +343,7 @@ class NIMAgent(BaseAgent):
             try:
                 async with httpx.AsyncClient(timeout=60.0) as client:
                     response = await client.post(
-                        f"{NIM_API_BASE_URL}/chat/completions",
+                        f"{GROQ_API_BASE_URL}/chat/completions",
                         json=payload,
                         headers=headers
                     )
@@ -393,20 +398,20 @@ class NIMAgent(BaseAgent):
                 if "content" in message_obj and message_obj["content"]:
                     return message_obj["content"]
                 elif finish_reason:
-                    return f"API didn't return text. Finish reason: {finish_reason}"
+                    return f"Groq API didn't return text. Finish reason: {finish_reason}"
 
                 return f"Unexpected API response format: {data}"
 
             except httpx.HTTPStatusError as e:
-                self.logger.error(f"HTTP error calling NIM API: Status {e.response.status_code}, Response: {e.response.text}")
+                self.logger.error(f"HTTP error calling Groq API: Status {e.response.status_code}, Response: {e.response.text}")
                 if e.response.status_code == 401:
-                    return "NIM API Error: Invalid API key. Please check your NVIDIA NIM API key in your profile settings."
+                    return "Groq API Error: Invalid API key. Please check your Groq API key in your profile settings."
                 elif e.response.status_code == 429:
-                    return "NIM API Error: Rate limit exceeded. Please wait a moment and try again."
-                return f"NIM API Error (Status: {e.response.status_code}): {e.response.text}"
+                    return "Groq API Error: Rate limit exceeded. Please wait a moment and try again."
+                return f"Groq API Error (Status: {e.response.status_code}): {e.response.text}"
             except Exception as e:
-                self.logger.error(f"Error calling NIM API: {e}")
-                return f"I encountered an unexpected error when communicating with NVIDIA NIM: {str(e)}"
+                self.logger.error(f"Error calling Groq API: {e}")
+                return f"I encountered an unexpected error when communicating with Groq: {str(e)}"
 
         # Exceeded max iterations
         self.logger.warning(f"[MCP] {self.name} exceeded max tool iterations ({MAX_TOOL_ITERATIONS})")
