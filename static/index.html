@@ -868,9 +868,8 @@ print(f'Hello, {name}!')
 
             // Check for saved preference or use system preference
             const savedTheme = localStorage.getItem('theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            // Default to dark theme unless user explicitly chose light
+            if (savedTheme === 'dark' || !savedTheme) {
                 htmlElement.setAttribute('data-theme', 'dark');
                 darkModeToggle.checked = true;
                 if (darkModeToggleLearn) darkModeToggleLearn.checked = true;

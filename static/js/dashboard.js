@@ -235,9 +235,18 @@ class DashboardApp {
     }
 }
 
-// Init on DOM ready
+// Init on DOM ready — wait for apiFetch to be available from shared.js
 document.addEventListener('DOMContentLoaded', () => {
     window.dashApp = new DashboardApp();
-    // Wait for shared.js to finish auth, then init
-    setTimeout(() => window.dashApp.init(), 100);
+
+    function tryInit(attempts) {
+        if (typeof apiFetch === 'function') {
+            window.dashApp.init();
+        } else if (attempts > 0) {
+            setTimeout(() => tryInit(attempts - 1), 150);
+        } else {
+            console.error('[Dashboard] apiFetch not available after retries');
+        }
+    }
+    tryInit(10);
 });

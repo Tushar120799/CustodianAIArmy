@@ -62,7 +62,7 @@ async def legacy_app():
 
 @app.get("/dashboard")
 async def dashboard_page():
-    """Serve the AI Dashboard page"""
+    """Serve the AI Dashboard — modular dashboard page"""
     return FileResponse("static/pages/dashboard.html")
 
 @app.get("/learn")

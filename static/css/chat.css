@@ -14,7 +14,14 @@
 }
 
 @media (max-width: 900px) {
-    .chat-container { height: calc(100vh - 157px); }
+    /* On mobile: header=60px + page-nav~44px = 104px total fixed height above chat */
+    .chat-container {
+        height: calc(100vh - 110px);
+        min-height: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
 }
 
 /* ── Agents Top Panel ── */

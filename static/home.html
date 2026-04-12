@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" style="background:#0a0a0f;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53,48 +53,62 @@
         }
 
         /* ── Nav ── */
-        nav {
+        nav.main-nav {
             position: fixed;
             top: 0; left: 0; right: 0;
-            z-index: 100;
+            z-index: 200;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1rem 2rem;
-            background: rgba(10,10,15,0.85);
+            padding: 0 1.5rem;
+            height: 60px;
+            background: rgba(10,10,15,0.92);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
         }
+        .nav-left { display: flex; align-items: center; gap: 0.75rem; }
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.6rem;
             text-decoration: none;
             color: var(--primary);
             font-family: 'Orbitron', monospace;
             font-weight: 900;
-            font-size: 1.1rem;
+            font-size: 1rem;
             letter-spacing: 1px;
         }
-        .nav-logo i { font-size: 1.6rem; filter: drop-shadow(0 0 8px var(--primary)); }
-        .nav-links { display: flex; align-items: center; gap: 1.5rem; }
-        .nav-links a {
-            color: var(--text2);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: color 0.2s;
+        .nav-logo i { font-size: 1.5rem; filter: drop-shadow(0 0 6px var(--primary)); }
+        .nav-logo:hover { color: var(--primary); }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            transition: filter 0.2s;
         }
-        .nav-links a:hover { color: var(--primary); }
-        .nav-cta {
+        .hamburger-btn:hover { filter: drop-shadow(0 0 6px var(--primary)); }
+
+        .nav-signin {
             background: var(--primary);
             color: #000 !important;
-            padding: 0.5rem 1.25rem;
+            padding: 0.45rem 1.1rem;
             border-radius: 4px;
-            font-weight: 700 !important;
-            transition: box-shadow 0.2s !important;
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: box-shadow 0.2s;
+            white-space: nowrap;
         }
-        .nav-cta:hover { box-shadow: 0 0 20px var(--primary-glow) !important; color: #000 !important; }
+        .nav-signin:hover { box-shadow: 0 0 20px var(--primary-glow); color: #000; }
 
         /* ── Sections ── */
         section { position: relative; z-index: 1; }
@@ -195,10 +209,7 @@
         .hero-stat-label { font-size: 0.8rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
 
         /* ── Section Titles ── */
-        .section-title {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
+        .section-title { text-align: center; margin-bottom: 3rem; }
         .section-title h2 {
             font-family: 'Orbitron', monospace;
             font-size: clamp(1.5rem, 3vw, 2.5rem);
@@ -367,10 +378,7 @@
         .coming-tag { display: inline-block; background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px; margin-top: 0.5rem; }
 
         /* ── CTA Banner ── */
-        .cta-banner {
-            padding: 6rem 2rem;
-            text-align: center;
-        }
+        .cta-banner { padding: 6rem 2rem; text-align: center; }
         .cta-inner {
             max-width: 700px;
             margin: 0 auto;
@@ -387,6 +395,8 @@
             background: var(--bg2);
             border-top: 1px solid var(--border);
             padding: 3rem 2rem 2rem;
+            position: relative;
+            z-index: 1;
         }
         .footer-inner {
             max-width: 1200px;
@@ -411,32 +421,144 @@
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .float { animation: float 4s ease-in-out infinite; }
 
+        /* ── Offcanvas ── */
+        .offcanvas.home-offcanvas {
+            background: #0f0f1a !important;
+            color: #e8e8f0 !important;
+            border-right: 1px solid rgba(77,171,247,0.2) !important;
+            max-width: 300px !important;
+            width: 80vw !important;
+            z-index: 1050;
+        }
+        .offcanvas.home-offcanvas .offcanvas-header {
+            border-bottom: 1px solid rgba(77,171,247,0.15);
+            background: rgba(77,171,247,0.05);
+        }
+        .offcanvas.home-offcanvas .offcanvas-title {
+            font-family: 'Orbitron', monospace;
+            color: #4dabf7;
+            letter-spacing: 1px;
+            font-size: 1rem;
+        }
+        .offcanvas.home-offcanvas .btn-close { filter: invert(1); }
+
+        .offcanvas-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #e8e8f0;
+            border: 1px solid transparent;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin-bottom: 0.2rem;
+        }
+        .offcanvas-nav-link:hover {
+            background: rgba(77,171,247,0.08);
+            border-color: rgba(77,171,247,0.2);
+            color: #4dabf7;
+        }
+        .offcanvas-nav-link.active {
+            background: rgba(77,171,247,0.12);
+            border-color: rgba(77,171,247,0.4);
+            color: #4dabf7;
+            font-weight: 600;
+        }
+        .offcanvas-nav-link i { width: 18px; text-align: center; }
+
+        .offcanvas-signin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000;
+            background: #4dabf7;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            transition: box-shadow 0.2s;
+        }
+        .offcanvas-signin:hover { box-shadow: 0 0 20px rgba(77,171,247,0.4); color: #000; }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
-            nav { padding: 0.75rem 1rem; }
-            .nav-links { display: none; }
+            nav.main-nav { padding: 0 1rem; }
             .hero { padding: 6rem 1.5rem 3rem; }
             .hero-stats { gap: 2rem; }
             .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
             .footer-bottom { flex-direction: column; text-align: center; }
+            .features-grid { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 2rem; }
+            .hero-ctas { flex-direction: column; align-items: center; }
+            .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
         }
     </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-    <a href="/" class="nav-logo">
-        <i class="fas fa-robot float"></i>
-        Custodian AI
-    </a>
-    <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#coming-soon">Roadmap</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/api/v1/auth/google" class="nav-cta"><i class="fab fa-google"></i> Sign In</a>
+<!-- Offcanvas Sidebar — scrollable, no full-page backdrop -->
+<div class="offcanvas offcanvas-start home-offcanvas" tabindex="-1" id="homeOffcanvas"
+     data-bs-scroll="true" data-bs-backdrop="false">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Menu</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
+    <div class="offcanvas-body p-0">
+        <nav style="display:flex;flex-direction:column;padding:0.75rem;">
+            <a href="/" class="offcanvas-nav-link active">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <a href="/dashboard" class="offcanvas-nav-link">
+                <i class="fas fa-brain"></i> AI Dashboard
+            </a>
+            <a href="/learn" class="offcanvas-nav-link">
+                <i class="fas fa-graduation-cap"></i> Learn with AI
+            </a>
+            <a href="/portfolio" class="offcanvas-nav-link">
+                <i class="fab fa-github"></i> Build Your Portfolio
+            </a>
+            <a href="/build" class="offcanvas-nav-link">
+                <i class="fas fa-cubes"></i> Build Your Product
+            </a>
+            <hr style="border-color:rgba(77,171,247,0.15);margin:0.5rem 0;">
+            <a href="#pricing" data-bs-dismiss="offcanvas" class="offcanvas-nav-link">
+                <i class="fas fa-tag"></i> Pricing
+            </a>
+            <a href="#coming-soon" data-bs-dismiss="offcanvas" class="offcanvas-nav-link">
+                <i class="fas fa-road"></i> Roadmap
+            </a>
+            <hr style="border-color:rgba(77,171,247,0.15);margin:0.5rem 0;">
+            <a href="/api/v1/auth/google" class="offcanvas-signin">
+                <i class="fab fa-google"></i> Sign In with Google
+            </a>
+        </nav>
+    </div>
+</div>
+
+<!-- Nav Bar -->
+<nav class="main-nav">
+    <div class="nav-left">
+        <button type="button" class="hamburger-btn" data-bs-toggle="offcanvas" data-bs-target="#homeOffcanvas" aria-label="Open menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <a href="/" class="nav-logo">
+            <i class="fas fa-robot float"></i>
+            Custodian AI
+        </a>
+    </div>
+    <a href="/api/v1/auth/google" class="nav-signin">
+        <i class="fab fa-google"></i> Sign In
+    </a>
 </nav>
 
 <!-- Hero -->
@@ -675,5 +797,20 @@
     </div>
 </footer>
 
+<!-- Bootstrap JS for offcanvas functionality -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Close sidebar when clicking outside of it
+    document.addEventListener('click', function(e) {
+        var offcanvasEl = document.getElementById('homeOffcanvas');
+        var hamburgerBtn = document.querySelector('.hamburger-btn');
+        var offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+        if (!offcanvasInstance) return;
+        // If sidebar is open and click is outside sidebar and outside hamburger
+        if (!offcanvasEl.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            offcanvasInstance.hide();
+        }
+    });
+</script>
 </body>
 </html>

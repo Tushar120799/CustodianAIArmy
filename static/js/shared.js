@@ -1,6 +1,7 @@
 /**
- * shared.js — Auth, Theme, Nav, API Helpers
+ * shared.js — Auth, Nav, API Helpers
  * Loaded by every app page (dashboard, learn, portfolio, build)
+ * Dark theme is permanent — no theme toggling
  */
 
 // ── API Base ──────────────────────────────────────────────────
@@ -16,36 +17,17 @@ async function apiFetch(path, options = {}) {
     return res.json();
 }
 
-// ── Theme ─────────────────────────────────────────────────────
-function initTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', saved);
-    const toggle = document.getElementById('darkModeToggle');
-    if (toggle) {
-        toggle.checked = saved === 'dark';
-        toggle.addEventListener('change', () => {
-            const theme = toggle.checked ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-        });
-    }
-}
-
 // ── Auth ──────────────────────────────────────────────────────
 let currentUser = null;
 
 async function loadCurrentUser() {
     try {
-        const data = await apiFetch('/user/plan');
-        // Try to get user profile from cookies via plan endpoint
-        const sessionRes = await fetch('/api/v1/user/plan', { credentials: 'include' });
-        const planData = await sessionRes.json();
-
-        // Try to get actual user info
         const profileRes = await fetch('/api/v1/auth/me', { credentials: 'include' });
         if (profileRes.ok) {
             currentUser = await profileRes.json();
         }
+        const planRes = await fetch('/api/v1/user/plan', { credentials: 'include' });
+        const planData = planRes.ok ? await planRes.json() : null;
         return { user: currentUser, plan: planData };
     } catch (e) {
         return { user: null, plan: null };
@@ -63,7 +45,7 @@ function updateUserProfileUI(user) {
         if (nameEl) nameEl.textContent = user.name || user.email;
         if (emailEl) emailEl.textContent = user.email;
         if (avatarEl && user.picture) {
-            avatarEl.innerHTML = `<img src="${user.picture}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+            avatarEl.innerHTML = `<img src="${user.picture}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--primary-color);">`;
         }
         if (loginItem) loginItem.style.display = 'none';
         if (logoutItem) logoutItem.style.display = '';
@@ -98,36 +80,17 @@ function updatePlanUI(planData) {
 // ── Active Page Nav Highlight ─────────────────────────────────
 function highlightActiveNav() {
     const path = window.location.pathname;
-    document.querySelectorAll('.page-nav a, .nav-item').forEach(link => {
+    document.querySelectorAll('.nav-item').forEach(link => {
         const href = link.getAttribute('href');
-        if (href && path.startsWith(href) && href !== '/') {
+        if (!href) return;
+        if (href === '/' && path === '/') {
             link.classList.add('active');
-        } else if (href === '/' && path === '/') {
+        } else if (href !== '/' && path.startsWith(href)) {
             link.classList.add('active');
         } else {
             link.classList.remove('active');
         }
     });
-}
-
-// ── Mobile Sidebar Toggle ─────────────────────────────────────
-function initMobileSidebar() {
-    const burger = document.getElementById('hamburger-btn');
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-
-    if (burger && sidebar) {
-        burger.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            if (overlay) overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
-        });
-    }
-    if (overlay) {
-        overlay.addEventListener('click', () => {
-            if (sidebar) sidebar.classList.remove('open');
-            overlay.style.display = 'none';
-        });
-    }
 }
 
 // ── Language Toggle ───────────────────────────────────────────
@@ -140,8 +103,8 @@ function setLanguage(lang) {
         el.style.display = el.dataset.lang === lang ? '' : 'none';
     });
     // Update button states
-    document.querySelectorAll('[id$="-en-btn"]').forEach(b => b.classList.toggle('active', lang === 'en'));
-    document.querySelectorAll('[id$="-de-btn"]').forEach(b => b.classList.toggle('active', lang === 'de'));
+    document.querySelectorAll('[id$="-en-btn"], [id="lang-en-btn"], [id="learn-lang-en-btn"]').forEach(b => b.classList.toggle('active', lang === 'en'));
+    document.querySelectorAll('[id$="-de-btn"], [id="lang-de-btn"], [id="learn-lang-de-btn"]').forEach(b => b.classList.toggle('active', lang === 'de'));
     // Dispatch event for page-specific handlers
     document.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
 }
@@ -157,8 +120,13 @@ function showToast(message, type = 'info', duration = 3000) {
         document.body.appendChild(container);
     }
     const toast = document.createElement('div');
-    const colors = { info: '#007bff', success: '#28a745', warning: '#ffc107', error: '#dc3545' };
-    toast.style.cssText = `background:${colors[type]||colors.info};color:white;padding:0.75rem 1.5rem;border-radius:4px;font-size:0.9rem;box-shadow:0 2px 8px rgba(0,0,0,0.2);animation:fadeIn 0.2s ease;`;
+    const colors = {
+        info: 'rgba(77,171,247,0.9)',
+        success: 'rgba(16,185,129,0.9)',
+        warning: 'rgba(245,158,11,0.9)',
+        error: 'rgba(245,108,108,0.9)'
+    };
+    toast.style.cssText = `background:${colors[type]||colors.info};color:#000;padding:0.75rem 1.5rem;border-radius:6px;font-size:0.875rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);animation:fadeIn 0.2s ease;backdrop-filter:blur(8px);`;
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => { toast.remove(); }, duration);
@@ -167,8 +135,9 @@ window.showToast = showToast;
 
 // ── Init (called on every page) ───────────────────────────────
 async function initShared() {
-    initTheme();
-    initMobileSidebar();
+    // Dark theme is always on — no toggling needed
+    document.documentElement.setAttribute('data-theme', 'dark');
+
     highlightActiveNav();
     setLanguage(currentLang);
 
