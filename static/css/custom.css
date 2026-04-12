@@ -1,4 +1,116 @@
 /* ─────────────────────────────────────────────────────────────────────────────
+   API Keys Modal – Active Agent / Provider Bar
+───────────────────────────────────────────────────────────────────────────── */
+
+.api-keys-active-agent-bar {
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.07) 0%, rgba(0, 229, 255, 0.02) 100%);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+}
+
+/* Provider card highlight – applied when the active agent uses that provider */
+.provider-card-active {
+    border-color: var(--accent-cyan, #00e5ff) !important;
+    box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.25), 0 0 12px rgba(0, 229, 255, 0.1);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Model Selector Popup
+───────────────────────────────────────────────────────────────────────────── */
+
+.model-selector-popup {
+    background: var(--gradient-dark, #0a0a1a);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 8px;
+    min-width: 240px;
+    max-width: 320px;
+    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 229, 255, 0.1);
+    overflow: hidden;
+}
+
+.model-selector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.model-selector-list {
+    padding: 4px 0;
+    margin: 0;
+}
+
+.model-selector-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #a0aec0);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.model-selector-item:hover {
+    background: rgba(0, 229, 255, 0.08);
+    color: var(--accent-cyan, #00e5ff);
+}
+
+.model-selector-item.active {
+    background: rgba(0, 229, 255, 0.12);
+    color: var(--accent-cyan, #00e5ff);
+    font-weight: 600;
+}
+
+#active-model-display {
+    font-size: 0.8rem;
+    transition: opacity 0.2s ease;
+}
+
+#active-model-display:hover {
+    opacity: 0.8;
+}
+
+@media (max-width: 576px) {
+    .api-keys-active-agent-bar {
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+}
+
+/* Active Agent Banner */
+.active-agent-banner {
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 229, 255, 0.03) 100%);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+    padding: 8px 16px;
+    font-size: 0.875rem;
+}
+
+.active-agent-banner .badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+
+@media (max-width: 576px) {
+    .active-agent-banner {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    .active-agent-banner #active-agent-name {
+        font-size: 0.85rem;
+    }
+    .active-agent-banner #active-agent-spec {
+        display: none;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Custodian AI Army - Custom CSS
    Includes: existing custom styles + new Course UI styles
 ───────────────────────────────────────────────────────────────────────────── */
@@ -115,6 +227,46 @@
 
 /* ── Language Toggle ── */
 .lang-toggle .btn {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LEARN WITH AI - Section-level Language & Dark Mode Controls
+   These controls appear ONLY inside the "Learn with AI" section.
+   They do NOT affect the main header.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* Container bar for the learn-section controls */
+.learn-section-controls {
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    background: rgba(0, 229, 255, 0.04);
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    /* Ensure it sits below the fixed header and does not overlap it */
+    position: relative;
+    z-index: 1;
+    /* Prevent it from touching the section-header below */
+    margin-bottom: 0.75rem !important;
+}
+
+/* On mobile, hide the header-level lang toggle when on the learn section.
+   We use a body class toggled by JS to scope this. */
+body.section-learn .header .lang-toggle,
+body.section-learn .dark-mode-container {
+    display: none !important;
+}
+
+/* Sync the learn-section dark-mode toggle label colour */
+#learn-dark-mode-toggle .form-check-label {
+    color: var(--accent-cyan, #00e5ff);
+    font-size: 1rem;
+}
+
+/* Keep the learn-section lang toggle buttons consistent */
+#learn-lang-toggle .btn {
     font-size: 0.75rem;
     padding: 0.2rem 0.5rem;
     font-weight: 600;

@@ -9,6 +9,9 @@ import uuid
 
 from src.agents.base_agent import BaseAgent, AgentMessage, AgentStatus, AgentType
 from src.agents.gemini_agent import GeminiAgent
+from src.agents.nim_agent import NIMAgent
+from src.agents.claude_agent import ClaudeAgent
+from src.agents.claude_code_agent import ClaudeCodeAgent
 from src.core.logging_config import get_logger
 
 
@@ -141,7 +144,73 @@ class AgentManager:
         self.register_agent(research_main)
         self.register_agent(fact_checker)
         self.register_agent(trend_analyst)
-        
+
+        # ── NVIDIA NIM Agents ──────────────────────────────────────────────────
+        nim_coordinator = NIMAgent(
+            name="NIM-CustodianAI",
+            specialization="coordinator",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(nim_coordinator)
+
+        nim_technical = NIMAgent(
+            name="NIM-TechnicalAI",
+            specialization="technical",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(nim_technical)
+
+        nim_researcher = NIMAgent(
+            name="NIM-ResearchAI",
+            specialization="researcher",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(nim_researcher)
+
+        nim_creative = NIMAgent(
+            name="NIM-CreativeAI",
+            specialization="creative",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(nim_creative)
+
+        # ── Anthropic Claude Agents ────────────────────────────────────────────
+        claude_coordinator = ClaudeAgent(
+            name="Claude-CustodianAI",
+            specialization="coordinator",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(claude_coordinator)
+
+        claude_technical = ClaudeAgent(
+            name="Claude-TechnicalAI",
+            specialization="technical",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(claude_technical)
+
+        claude_analyst = ClaudeAgent(
+            name="Claude-AnalystAI",
+            specialization="analyst",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(claude_analyst)
+
+        claude_researcher = ClaudeAgent(
+            name="Claude-ResearchAI",
+            specialization="researcher",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(claude_researcher)
+
+        # ── Claude Code Agent (CLI-based) ──────────────────────────────────────
+        claude_code = ClaudeCodeAgent(
+            name="ClaudeCode-AI",
+            specialization="technical",
+            agent_type=AgentType.MAIN
+        )
+        self.register_agent(claude_code)
+
         self.logger.info(f"Initialized {len(self.agents)} agents in the Custodian AI Army")
     
     def register_agent(self, agent: BaseAgent) -> None:

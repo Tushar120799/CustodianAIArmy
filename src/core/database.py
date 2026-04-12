@@ -62,6 +62,17 @@ def init_db():
             )
         ''')
 
+        # User API keys table (per-user custom API keys)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_api_keys (
+                user_email TEXT PRIMARY KEY,
+                gemini_api_key TEXT,
+                anthropic_api_key TEXT,
+                nim_api_key TEXT,
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")
@@ -139,6 +150,144 @@ def save_chat_session(chat_data: Dict[str, Any]) -> str:
     conn.commit()
     conn.close()
     return chat_id
+
+def get_user_api_keys(user_email: str) -> Dict[str, Any]:
+    """Get user's custom API keys (returns masked values for display)"""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT gemini_api_key, anthropic_api_key, nim_api_key, last_updated
+        FROM user_api_keys
+        WHERE user_email = ?
+    ''', (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "gemini_api_key": None,
+            "anthropic_api_key": None,
+            "nim_api_key": None,
+            "has_gemini": False,
+            "has_anthropic": False,
+            "has_nim": False,
+            "last_updated": None
+        }
+
+    def mask_key(key: Optional[str]) -> Optional[str]:
+        if not key:
+            return None
+        if len(key) <= 8:
+            return "****"
+        return key[:4] + "****" + key[-4:]
+
+    return {
+        "gemini_api_key": mask_key(row[0]),
+        "anthropic_api_key": mask_key(row[1]),
+        "nim_api_key": mask_key(row[2]),
+        "has_gemini": bool(row[0]),
+        "has_anthropic": bool(row[1]),
+        "has_nim": bool(row[2]),
+        "last_updated": row[3]
+    }
+
+
+def get_user_api_keys_raw(user_email: str) -> Dict[str, Optional[str]]:
+    """Get user's actual (unmasked) API keys for internal use only"""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT gemini_api_key, anthropic_api_key, nim_api_key
+        FROM user_api_keys
+        WHERE user_email = ?
+    ''', (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {"gemini_api_key": None, "anthropic_api_key": None, "nim_api_key": None}
+
+    return {
+        "gemini_api_key": row[0],
+        "anthropic_api_key": row[1],
+        "nim_api_key": row[2]
+    }
+
+
+def save_user_api_keys(user_email: str, keys: Dict[str, Optional[str]]) -> bool:
+    """Save or update user's API keys. Pass None to keep existing value, empty string to clear."""
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+
+        # Get existing keys first
+        cursor.execute('''
+            SELECT gemini_api_key, anthropic_api_key, nim_api_key
+            FROM user_api_keys WHERE user_email = ?
+        ''', (user_email,))
+        existing = cursor.fetchone()
+
+        if existing:
+            # Update only provided keys (None means "don't change")
+            new_gemini = keys.get("gemini_api_key", None)
+            new_anthropic = keys.get("anthropic_api_key", None)
+            new_nim = keys.get("nim_api_key", None)
+
+            final_gemini = new_gemini if new_gemini is not None else existing[0]
+            final_anthropic = new_anthropic if new_anthropic is not None else existing[1]
+            final_nim = new_nim if new_nim is not None else existing[2]
+
+            # Empty string means "clear the key"
+            final_gemini = None if final_gemini == "" else final_gemini
+            final_anthropic = None if final_anthropic == "" else final_anthropic
+            final_nim = None if final_nim == "" else final_nim
+
+            cursor.execute('''
+                UPDATE user_api_keys
+                SET gemini_api_key = ?, anthropic_api_key = ?, nim_api_key = ?, last_updated = ?
+                WHERE user_email = ?
+            ''', (final_gemini, final_anthropic, final_nim, now, user_email))
+        else:
+            gemini = keys.get("gemini_api_key") or None
+            anthropic = keys.get("anthropic_api_key") or None
+            nim = keys.get("nim_api_key") or None
+            cursor.execute('''
+                INSERT INTO user_api_keys (user_email, gemini_api_key, anthropic_api_key, nim_api_key, last_updated)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_email, gemini, anthropic, nim, now))
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error saving API keys: {e}")
+        return False
+
+
+def delete_user_api_key(user_email: str, provider: str) -> bool:
+    """Delete a specific provider's API key for a user"""
+    valid_providers = {"gemini": "gemini_api_key", "anthropic": "anthropic_api_key", "nim": "nim_api_key"}
+    if provider not in valid_providers:
+        return False
+
+    column = valid_providers[provider]
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+        cursor.execute(f'''
+            UPDATE user_api_keys
+            SET {column} = NULL, last_updated = ?
+            WHERE user_email = ?
+        ''', (now, user_email))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error deleting API key: {e}")
+        return False
+
 
 # Initialize the database when this module is loaded
 try:

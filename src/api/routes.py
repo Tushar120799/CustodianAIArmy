@@ -14,7 +14,10 @@ import uuid
 from datetime import datetime
 
 from src.agents.agent_manager import AgentManager
-from src.core.database import get_chats_for_user, save_chat_session, DB_PATH
+from src.core.database import (
+    get_chats_for_user, save_chat_session, DB_PATH,
+    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key
+)
 from src.agents.base_agent import AgentMessage
 from src.core.logging_config import get_logger
 from src.api.auth import get_current_user_from_cookies, User
@@ -748,6 +751,86 @@ Slide Content:
         raise
     except Exception as e:
         logger.error(f"Error in course chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STARTUP / SHUTDOWN
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USER API KEYS ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class UserApiKeysRequest(BaseModel):
+    gemini_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    nim_api_key: Optional[str] = None
+
+
+@router.get("/user/api-keys")
+async def get_my_api_keys(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Get the current user's saved API keys (masked for security)"""
+    try:
+        keys = get_user_api_keys(current_user.email)
+        return {
+            "status": "success",
+            "user_email": current_user.email,
+            "keys": keys
+        }
+    except Exception as e:
+        logger.error(f"Error getting API keys: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/user/api-keys")
+async def save_my_api_keys(
+    request: UserApiKeysRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Save or update the current user's API keys"""
+    try:
+        keys_dict = {
+            "gemini_api_key": request.gemini_api_key,
+            "anthropic_api_key": request.anthropic_api_key,
+            "nim_api_key": request.nim_api_key,
+        }
+        success = save_user_api_keys(current_user.email, keys_dict)
+        if success:
+            return {"status": "success", "message": "API keys saved successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save API keys")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving API keys: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/user/api-keys/{provider}")
+async def delete_my_api_key(
+    provider: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Delete a specific provider's API key for the current user"""
+    valid_providers = ["gemini", "anthropic", "nim"]
+    if provider not in valid_providers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid provider. Must be one of: {', '.join(valid_providers)}"
+        )
+    try:
+        success = delete_user_api_key(current_user.email, provider)
+        if success:
+            return {"status": "success", "message": f"{provider} API key removed"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete API key")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting API key: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -3,12 +3,33 @@ Gemini Agent implementation (renamed from Nemotron)
 """
 
 import httpx
+import os
 from typing import Dict, Any, List
 from datetime import datetime
 
 from src.agents.base_agent import BaseAgent, AgentMessage, AgentStatus, AgentType, AgentCapability
 from src.core.config import settings
 from src.core.logging_config import get_logger
+
+# Directory where prompt .md files are stored
+PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
+
+
+def _load_prompt(filename: str) -> str:
+	"""Load a prompt from a .md file in the prompts directory.
+	Returns the file content stripped of leading/trailing whitespace.
+	Falls back to an empty string if the file is not found."""
+	filepath = os.path.join(PROMPTS_DIR, filename)
+	try:
+		with open(filepath, "r", encoding="utf-8") as f:
+			content = f.read().strip()
+		# Strip the first markdown heading line if present (e.g. "# Title\n\n")
+		lines = content.splitlines()
+		if lines and lines[0].startswith("#"):
+			content = "\n".join(lines[1:]).strip()
+		return content
+	except FileNotFoundError:
+		return ""
 
 
 
@@ -231,32 +252,35 @@ class GeminiAgent(BaseAgent):
 				"agent_name": self.name
 			}
 	def _get_system_prompt(self) -> str:
-		"""Get system prompt based on agent specialization"""
-		prompts = {
+		"""Get system prompt based on agent specialization.
+		Loads from a .md file in src/agents/prompts/ if available,
+		otherwise falls back to the hardcoded default."""
+		# Map specialization names to prompt filenames
+		prompt_file_map = {
+			"general": "general.md",
+			"analyst": "analyst.md",
+			"creative": "creative.md",
+			"technical": "technical.md",
+			"researcher": "researcher.md",
+			"tutor": "tutor.md",
+			"coordinator": "coordinator.md",
+		}
+		filename = prompt_file_map.get(self.specialization)
+		if filename:
+			loaded = _load_prompt(filename)
+			if loaded:
+				return loaded
+		# Hardcoded fallbacks (used if .md file is missing or empty)
+		fallbacks = {
 			"general": "You are a helpful AI assistant. Provide accurate, helpful, and engaging responses.",
 			"analyst": "You are a data analyst AI. Focus on analytical thinking, data interpretation, and insights.",
 			"creative": "You are a creative AI assistant. Focus on creative writing, brainstorming, and innovative solutions.",
 			"technical": "You are a technical AI assistant. Focus on technical accuracy, problem-solving, and detailed explanations.",
 			"researcher": "You are a research AI assistant. Focus on thorough research, fact-checking, and comprehensive analysis.",
-			"tutor": """You are an expert, encouraging programming tutor. Your role is to help students learn programming concepts clearly and effectively.
-When given course context (course title, topic, slide content), use it to:
-1. Explain concepts from the slide in simple, clear language with examples
-2. Debug and explain any code the student submits
-3. Suggest improvements and best practices
-4. Provide encouragement and guide the student step by step
-Always be patient, supportive, and pedagogically sound. Use code examples when helpful.
-If the student's code has errors, explain what went wrong and how to fix it.
-Reference the slide content when relevant to ground your explanation.""",
-			"coordinator": """You are a silent, intelligent router. Your job is to receive a user's request and determine the best possible expert to answer it.
-Analyze the user's message to determine if it is a 'technical', 'analytical', 'creative', or 'research' question.
-- Technical questions involve code, software, or engineering.
-- Analytical questions involve data, numbers, or interpretation.
-- Creative questions involve writing, brainstorming, or design.
-- Research questions involve finding and summarizing information.
-Based on this analysis, you will adopt the persona of the corresponding expert (TechnicalAI, AnalystAI, CreativeAI, or ResearchAI) and provide a complete, expert-level response to the user's request.
-Do NOT mention that you are a router or that you are delegating the task. Simply answer the question as the expert would."""
+			"tutor": "You are an expert, encouraging programming tutor. Help students learn programming concepts clearly and effectively.",
+			"coordinator": "You are Custodian AI — an intelligent orchestrator and the central command of the Custodian AI Army. Adopt the persona of the best expert and answer the user's question directly.",
 		}
-		return prompts.get(self.specialization, prompts["general"])
+		return fallbacks.get(self.specialization, fallbacks["general"])
 
 	def _get_delegated_task_prompt(self, user_message: str) -> str:
 		"""
@@ -270,15 +294,30 @@ Do NOT mention that you are a router or that you are delegating the task. Simply
 		return self._get_task_prompt("general") # Fallback
 
 	def _get_task_prompt(self, task_type: str) -> str:
-		"""Get task-specific system prompt"""
-		prompts = {
+		"""Get task-specific system prompt.
+		Loads from a .md file in src/agents/prompts/ if available,
+		otherwise falls back to the hardcoded default."""
+		task_file_map = {
+			"analysis": "task_analysis.md",
+			"writing": "task_writing.md",
+			"coding": "task_coding.md",
+			"research": "task_research.md",
+			"planning": "task_planning.md",
+		}
+		filename = task_file_map.get(task_type)
+		if filename:
+			loaded = _load_prompt(filename)
+			if loaded:
+				return loaded
+		# Hardcoded fallbacks
+		fallbacks = {
 			"analysis": "You are an expert analyst. Provide thorough analysis with clear insights and recommendations.",
 			"writing": "You are an expert writer. Create well-structured, engaging, and high-quality content.",
 			"coding": "You are an expert programmer. Provide clean, efficient, and well-documented code solutions.",
 			"research": "You are an expert researcher. Provide comprehensive, accurate, and well-sourced information.",
 			"planning": "You are an expert planner. Create detailed, actionable, and realistic plans.",
 		}
-		return prompts.get(task_type, self._get_system_prompt())
+		return fallbacks.get(task_type, self._get_system_prompt())
 
 	async def _call_gemini_api(
 		self,

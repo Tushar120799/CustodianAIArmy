@@ -1,3 +1,9 @@
 [submodule "dependencies/Programming-Slides"]
 	path = dependencies/Programming-Slides
 	url = https://github.com/Tushar120799/Programming-Slides.git
+[submodule "dependencies/BMAD-METHOD"]
+	path = dependencies/BMAD-METHOD
+	url = https://github.com/Tushar1224/BMAD-METHOD.git
+[submodule "dependencies/claudecode"]
+	path = dependencies/claudecode
+	url = https://github.com/Tushar120799/claudecode.git

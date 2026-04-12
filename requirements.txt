@@ -25,5 +25,7 @@ aiofiles>=23.0.0
 # numpy>=1.24.0
 # pandas>=2.0.0
 # scikit-learn>=1.3.0
-# openai>=1.0.0
-# anthropic>=0.7.0
+
+# AI Provider SDKs (uncomment to use official SDKs instead of httpx)
+# openai>=1.0.0        # For NVIDIA NIM (OpenAI-compatible) - optional, httpx used by default
+# anthropic>=0.40.0    # For Claude API - optional, httpx used by default

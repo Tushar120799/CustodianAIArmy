@@ -85,6 +85,7 @@
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userProfileDropdown" style="background: var(--gradient-dark); border: 1px solid var(--accent-cyan);">
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i> Edit Details</a></li>
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#chatHistoryModal"><i class="fas fa-history me-2"></i> Chat History</a></li>
+                            <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#apiKeysModal" onclick="loadApiKeys(); if(window.app && window.app.currentAgent) window.app._updateApiKeysAgentDisplay(window.app.currentAgent);"><i class="fas fa-key me-2"></i> API Keys</a></li>
                             <li><hr class="dropdown-divider border-info"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>
@@ -157,8 +158,16 @@
                         </div>
                         <!-- Chat Window -->
                         <div class="chat-main" id="chat-main" style="flex: 1; min-height: 0;">
-                            <div class="chat-header">
-                                <span id="current-agent">Select an agent to start chatting</span>
+                            <!-- Active Agent Banner -->
+                            <div class="active-agent-banner" id="active-agent-banner" style="display:none;">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge bg-info text-dark"><i class="fas fa-robot me-1"></i>Active Agent</span>
+                                    <span id="active-agent-name" class="fw-bold text-info"></span>
+                                    <span id="active-agent-spec" class="text-secondary small"></span>
+                                    <button class="btn btn-sm btn-outline-info ms-auto" data-bs-toggle="modal" data-bs-target="#agentSelectModal">
+                                        <i class="fas fa-exchange-alt me-1"></i><span class="d-none d-sm-inline">Switch Agent</span><span class="d-inline d-sm-none">Switch</span>
+                                    </button>
+                                </div>
                             </div>
                             <div class="chat-messages" id="chat-messages">
                                 <div class="welcome-message">
@@ -171,6 +180,11 @@
                                 <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#mcpModal">
                                     <i class="fas fa-plug me-1"></i> Add MCP
                                 </button>
+                                <!-- Active model display + model selector -->
+                                <span class="text-muted small d-none d-sm-inline">|</span>
+                                <span id="active-model-display" class="text-secondary small d-none" style="cursor:pointer;" onclick="window.app && window.app.openModelSelector()" title="Click to change model">
+                                    <i class="fas fa-microchip me-1"></i><span id="active-model-name" class="text-info text-decoration-underline"></span>
+                                </span>
                                 <div class="form-check form-switch ms-auto">
                                     <input class="form-check-input" type="checkbox" id="incognitoToggle">
                                     <label class="form-check-label text-secondary small" for="incognitoToggle">
@@ -193,6 +207,21 @@
 
                 <!-- Learn With AI Section -->
                 <section id="learn" class="content-section">
+                    <!-- Learn with AI: Language & Dark Mode controls (only visible on this section) -->
+                    <div class="learn-section-controls d-flex align-items-center justify-content-between mb-2" id="learn-section-controls">
+                        <!-- Language Toggle (left side) -->
+                        <div class="lang-toggle d-flex gap-1" id="learn-lang-toggle">
+                            <button class="btn btn-sm btn-outline-info active" id="learn-lang-en-btn" onclick="setLanguage('en')">EN</button>
+                            <button class="btn btn-sm btn-outline-secondary" id="learn-lang-de-btn" onclick="setLanguage('de')">DE</button>
+                        </div>
+                        <!-- Dark Mode Toggle (right side) -->
+                        <div class="form-check form-switch m-0" id="learn-dark-mode-toggle">
+                            <input class="form-check-input" type="checkbox" id="darkModeToggleLearn">
+                            <label class="form-check-label" for="darkModeToggleLearn">
+                                <i class="fas fa-moon"></i>
+                            </label>
+                        </div>
+                    </div>
                     <div class="section-header d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
                             <h2>Learn with AI</h2>
@@ -537,6 +566,128 @@ print(f'Hello, {name}!')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="/static/js/app.js?v=10"></script>
     
+    <!-- API Keys Modal -->
+    <div class="modal fade" id="apiKeysModal" tabindex="-1" aria-labelledby="apiKeysModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-info">
+                    <h5 class="modal-title text-info" id="apiKeysModalLabel">
+                        <i class="fas fa-key me-2"></i>API Keys Manager
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Active Agent / Provider Display -->
+                    <div id="api-keys-active-agent" class="api-keys-active-agent-bar mb-4 d-none">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-info text-dark"><i class="fas fa-robot me-1"></i>Active Agent</span>
+                            <span id="api-keys-agent-name" class="fw-bold text-info"></span>
+                            <span id="api-keys-agent-spec" class="text-secondary small"></span>
+                            <span class="ms-auto d-flex align-items-center gap-2">
+                                <span class="text-muted small">Provider:</span>
+                                <span id="api-keys-provider-badge" class="badge"></span>
+                            </span>
+                        </div>
+                        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                            <span class="text-muted small"><i class="fas fa-info-circle me-1"></i>Switch provider by selecting a different agent:</span>
+                            <button class="btn btn-sm btn-outline-info" onclick="window.app && window.app.switchToProvider('gemini')" title="Switch to Google Gemini agents">
+                                <i class="fab fa-google me-1"></i>Gemini
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="window.app && window.app.switchToProvider('anthropic')" title="Switch to Anthropic Claude agents">
+                                <i class="fas fa-brain me-1"></i>Claude
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="window.app && window.app.switchToProvider('nim')" title="Switch to NVIDIA NIM agents">
+                                <i class="fas fa-microchip me-1"></i>NIM
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-4">
+                        Add your own API keys to use personal quotas. If left empty, the server's default keys are used.
+                        Keys are stored securely and never shown in full.
+                    </p>
+
+                    <!-- Gemini API Key -->
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-info text-dark me-2">Google</span>
+                                <h6 class="mb-0 text-info">Gemini API Key</h6>
+                                <span id="gemini-key-status" class="ms-auto badge bg-secondary">Using server default</span>
+                            </div>
+                            <p class="text-muted small mb-2">
+                                Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-info">aistudio.google.com</a>
+                            </p>
+                            <div class="input-group">
+                                <input type="password" class="form-control bg-dark text-white border-secondary" id="gemini-key-input" placeholder="AIza...">
+                                <button class="btn btn-outline-info" onclick="saveApiKey('gemini')">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteApiKey('gemini')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Anthropic Claude API Key -->
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-warning text-dark me-2">Anthropic</span>
+                                <h6 class="mb-0 text-info">Claude API Key</h6>
+                                <span id="anthropic-key-status" class="ms-auto badge bg-secondary">Using server default</span>
+                            </div>
+                            <p class="text-muted small mb-2">
+                                Get your key at <a href="https://console.anthropic.com" target="_blank" class="text-info">console.anthropic.com</a>
+                                &nbsp;|&nbsp; Also enables <strong>ClaudeCode-AI</strong> agent
+                            </p>
+                            <div class="input-group">
+                                <input type="password" class="form-control bg-dark text-white border-secondary" id="anthropic-key-input" placeholder="sk-ant-...">
+                                <button class="btn btn-outline-info" onclick="saveApiKey('anthropic')">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteApiKey('anthropic')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NVIDIA NIM API Key -->
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-success text-dark me-2">NVIDIA</span>
+                                <h6 class="mb-0 text-info">NIM API Key <span class="badge bg-success ms-1">FREE Tier</span></h6>
+                                <span id="nim-key-status" class="ms-auto badge bg-secondary">Using server default</span>
+                            </div>
+                            <p class="text-muted small mb-2">
+                                Get your <strong>FREE</strong> key at <a href="https://build.nvidia.com" target="_blank" class="text-info">build.nvidia.com</a>
+                                &nbsp;— 1000 free credits/month. Runs Llama 3.3 70B, DeepSeek R1, and more.
+                            </p>
+                            <div class="input-group">
+                                <input type="password" class="form-control bg-dark text-white border-secondary" id="nim-key-input" placeholder="nvapi-...">
+                                <button class="btn btn-outline-info" onclick="saveApiKey('nim')">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteApiKey('nim')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="api-keys-message" class="alert d-none mt-3"></div>
+                </div>
+                <div class="modal-footer border-info">
+                    <small class="text-muted me-auto"><i class="fas fa-lock me-1"></i>Keys are stored securely in your account</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MCP Modal -->
     <div class="modal fade" id="mcpModal" tabindex="-1" aria-labelledby="mcpModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -694,6 +845,7 @@ print(f'Hello, {name}!')
         // Dark Mode Toggle
         document.addEventListener('DOMContentLoaded', function() {
             const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeToggleLearn = document.getElementById('darkModeToggleLearn');
             const htmlElement = document.documentElement;
 
             // Check for saved preference or use system preference
@@ -703,18 +855,33 @@ print(f'Hello, {name}!')
             if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
                 htmlElement.setAttribute('data-theme', 'dark');
                 darkModeToggle.checked = true;
+                if (darkModeToggleLearn) darkModeToggleLearn.checked = true;
             }
 
-            // Toggle dark mode
-            darkModeToggle.addEventListener('change', function() {
-                if (this.checked) {
+            function applyTheme(isDark) {
+                if (isDark) {
                     htmlElement.setAttribute('data-theme', 'dark');
                     localStorage.setItem('theme', 'dark');
                 } else {
                     htmlElement.removeAttribute('data-theme');
                     localStorage.setItem('theme', 'light');
                 }
+                // Keep both toggles in sync
+                darkModeToggle.checked = isDark;
+                if (darkModeToggleLearn) darkModeToggleLearn.checked = isDark;
+            }
+
+            // Toggle dark mode (header toggle)
+            darkModeToggle.addEventListener('change', function() {
+                applyTheme(this.checked);
             });
+
+            // Toggle dark mode (Learn with AI section toggle)
+            if (darkModeToggleLearn) {
+                darkModeToggleLearn.addEventListener('change', function() {
+                    applyTheme(this.checked);
+                });
+            }
         });
 
         // Add MCP Server handler

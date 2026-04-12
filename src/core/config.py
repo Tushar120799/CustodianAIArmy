@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta"
     GEMINI_MODEL: str = "gemini-2.5-flash"
+
+    # Anthropic Claude API Configuration
+    ANTHROPIC_API_KEY: Optional[str] = None
+    CLAUDE_MODEL: str = "claude-sonnet-4-5"
+
+    # NVIDIA NIM API Configuration (OpenAI-compatible, free tier available)
+    # Get your free key at: https://build.nvidia.com
+    NIM_API_KEY: Optional[str] = None
+    NIM_MODEL: str = "meta/llama-3.3-70b-instruct"
     
     # Database Configuration
     DATABASE_URL: str = "sqlite:///./custodian_ai.db"

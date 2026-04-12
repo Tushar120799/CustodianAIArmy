@@ -6,9 +6,16 @@ let currentLanguage = localStorage.getItem('custodian_lang') || 'en';
 function setLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('custodian_lang', lang);
-    // Update button states
-    document.getElementById('lang-en-btn').className = lang === 'en' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
-    document.getElementById('lang-de-btn').className = lang === 'de' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    // Update header button states
+    const enBtn = document.getElementById('lang-en-btn');
+    const deBtn = document.getElementById('lang-de-btn');
+    if (enBtn) enBtn.className = lang === 'en' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    if (deBtn) deBtn.className = lang === 'de' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    // Update learn-section button states (keep in sync)
+    const learnEnBtn = document.getElementById('learn-lang-en-btn');
+    const learnDeBtn = document.getElementById('learn-lang-de-btn');
+    if (learnEnBtn) learnEnBtn.className = lang === 'en' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+    if (learnDeBtn) learnDeBtn.className = lang === 'de' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
     // Refresh course list if on learn section
     if (window.app) {
         window.app.currentLang = lang;
@@ -361,9 +368,7 @@ class CustodianAIApp {
         });
         
         this.currentAgent = agent;
-        document.getElementById('current-agent').textContent = 
-            `Chatting with ${agent.name} (${agent.specialization || 'General'})`;
-        
+
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-btn');
         const changeAgentBtn = document.getElementById('change-agent-btn');
@@ -416,7 +421,30 @@ class CustodianAIApp {
         this.currentChatId = crypto.randomUUID ? crypto.randomUUID() : 'chat-' + Date.now();
         this.currentMessages = [{ sender: agent.name, content: welcomeText }];
         this.saveChatToDb();
-        
+
+        // Update active agent banner
+        const banner = document.getElementById('active-agent-banner');
+        const bannerName = document.getElementById('active-agent-name');
+        const bannerSpec = document.getElementById('active-agent-spec');
+        if (banner) banner.style.display = 'block';
+        if (bannerName) bannerName.textContent = agent.name;
+        if (bannerSpec) bannerSpec.textContent = agent.specialization ? '· ' + agent.specialization : '';
+
+        // Update API Keys modal active agent/provider display
+        this._updateApiKeysAgentDisplay(agent);
+
+        // Update model display in chat-options-bar
+        const provider = _getAgentProvider(agent);
+        const savedModel = localStorage.getItem('custodian_model_override_' + provider);
+        this.currentModelOverride = savedModel || null;
+        const models = _providerModels[provider] || [];
+        const defaultModel = models[0];
+        const activeModel = savedModel ? models.find(m => m.id === savedModel) : defaultModel;
+        const modelDisplayEl = document.getElementById('active-model-display');
+        const modelNameEl = document.getElementById('active-model-name');
+        if (modelDisplayEl) modelDisplayEl.classList.remove('d-none');
+        if (modelNameEl) modelNameEl.textContent = activeModel ? activeModel.label.replace(' (default)', '') : (defaultModel ? defaultModel.label.replace(' (default)', '') : '');
+
         chatInput.focus();
     }
 
@@ -684,7 +712,22 @@ class CustodianAIApp {
         if (sectionElement) {
             sectionElement.classList.add('active');
         }
-        
+
+        // Toggle body class so CSS can hide/show header controls per section
+        const learnSections = ['learn', 'course-detail'];
+        if (learnSections.includes(sectionName)) {
+            document.body.classList.add('section-learn');
+        } else {
+            document.body.classList.remove('section-learn');
+        }
+
+        // Sync learn-section lang buttons with current language state
+        const lang = currentLanguage || 'en';
+        const learnEnBtn = document.getElementById('learn-lang-en-btn');
+        const learnDeBtn = document.getElementById('learn-lang-de-btn');
+        if (learnEnBtn) learnEnBtn.className = lang === 'en' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+        if (learnDeBtn) learnDeBtn.className = lang === 'de' ? 'btn btn-sm btn-outline-info active' : 'btn btn-sm btn-outline-secondary';
+
         if (sectionName === 'learn') {
             this.updateLearningPathsGrid();
         }
@@ -1473,5 +1516,359 @@ function addTypingEffect() {
                 clearInterval(typeInterval);
             }
         }, 100);
+    });
+}
+
+// =============================================================================
+// API KEYS MANAGEMENT
+// =============================================================================
+
+/**
+ * Load API keys from backend and update status badges + input placeholders.
+ * Called when the API Keys modal is opened (onclick="loadApiKeys()").
+ */
+window.loadApiKeys = async function() {
+    var msgEl = document.getElementById('api-keys-message');
+    if (msgEl) { msgEl.className = 'alert d-none mt-3'; msgEl.textContent = ''; }
+
+    // Always refresh the active agent/provider display when the modal opens
+    if (window.app && window.app.currentAgent) {
+        window.app._updateApiKeysAgentDisplay(window.app.currentAgent);
+    }
+
+    try {
+        var resp = await fetch('/api/v1/user/api-keys', { credentials: 'include' });
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                _showApiKeyMessage('You must be logged in to manage API keys.', 'warning');
+            }
+            return;
+        }
+        var data = await resp.json();
+        var keys = data.keys || {};
+
+        var providers = [
+            { field: 'gemini_api_key',    statusEl: 'gemini-key-status',    inputEl: 'gemini-key-input',    placeholder: 'AIza...' },
+            { field: 'anthropic_api_key', statusEl: 'anthropic-key-status', inputEl: 'anthropic-key-input', placeholder: 'sk-ant-...' },
+            { field: 'nim_api_key',       statusEl: 'nim-key-status',       inputEl: 'nim-key-input',       placeholder: 'nvapi-...' }
+        ];
+
+        providers.forEach(function(p) {
+            var statusBadge = document.getElementById(p.statusEl);
+            var input = document.getElementById(p.inputEl);
+            var keyInfo = keys[p.field];
+
+            if (keyInfo && keyInfo.set) {
+                if (statusBadge) {
+                    statusBadge.className = 'ms-auto badge bg-success';
+                    statusBadge.textContent = keyInfo.masked ? 'Set (' + keyInfo.masked + ')' : 'Set ✓';
+                }
+                if (input) input.placeholder = keyInfo.masked || '••••••••';
+            } else {
+                if (statusBadge) {
+                    statusBadge.className = 'ms-auto badge bg-secondary';
+                    statusBadge.textContent = 'Using server default';
+                }
+                if (input) input.placeholder = p.placeholder;
+            }
+            if (input) input.value = '';
+        });
+
+    } catch (err) {
+        console.error('Failed to load API keys:', err);
+        _showApiKeyMessage('Failed to load API keys. Please try again.', 'danger');
+    }
+};
+
+/**
+ * Save a single provider API key to the backend.
+ * @param {string} provider - 'gemini' | 'anthropic' | 'nim'
+ */
+window.saveApiKey = async function(provider) {
+    var inputMap = { gemini: 'gemini-key-input', anthropic: 'anthropic-key-input', nim: 'nim-key-input' };
+    var fieldMap = { gemini: 'gemini_api_key', anthropic: 'anthropic_api_key', nim: 'nim_api_key' };
+
+    var inputEl = document.getElementById(inputMap[provider]);
+    var keyValue = inputEl ? inputEl.value.trim() : '';
+
+    if (!keyValue) {
+        _showApiKeyMessage('Please enter a ' + provider + ' API key before saving.', 'warning');
+        return;
+    }
+
+    try {
+        var body = {};
+        body[fieldMap[provider]] = keyValue;
+
+        var resp = await fetch('/api/v1/user/api-keys', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!resp.ok) {
+            var errData = await resp.json().catch(function() { return {}; });
+            throw new Error(errData.detail || 'Failed to save key');
+        }
+
+        _showApiKeyMessage(_capitalize(provider) + ' API key saved successfully!', 'success');
+        await loadApiKeys();
+
+    } catch (err) {
+        console.error('Error saving ' + provider + ' key:', err);
+        _showApiKeyMessage('Error: ' + err.message, 'danger');
+    }
+};
+
+/**
+ * Delete a provider API key from the backend.
+ * @param {string} provider - 'gemini' | 'anthropic' | 'nim'
+ */
+window.deleteApiKey = async function(provider) {
+    if (!confirm('Remove your ' + _capitalize(provider) + ' API key? The server default will be used instead.')) return;
+
+    try {
+        var resp = await fetch('/api/v1/user/api-keys/' + provider, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!resp.ok) {
+            var errData = await resp.json().catch(function() { return {}; });
+            throw new Error(errData.detail || 'Failed to delete key');
+        }
+
+        _showApiKeyMessage(_capitalize(provider) + ' API key removed.', 'info');
+        await loadApiKeys();
+
+    } catch (err) {
+        console.error('Error deleting ' + provider + ' key:', err);
+        _showApiKeyMessage('Error: ' + err.message, 'danger');
+    }
+};
+
+function _showApiKeyMessage(text, type) {
+    var el = document.getElementById('api-keys-message');
+    if (!el) return;
+    el.className = 'alert alert-' + type + ' mt-3';
+    el.textContent = text;
+    setTimeout(function() { el.className = 'alert d-none mt-3'; el.textContent = ''; }, 4000);
+}
+
+function _capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// =============================================================================
+// PROVIDER DETECTION HELPERS
+// =============================================================================
+
+/**
+ * Derive the provider key ('gemini' | 'anthropic' | 'nim') from an agent object.
+ * Uses agent name prefix conventions set in agent_manager.py.
+ */
+function _getAgentProvider(agent) {
+    if (!agent) return null;
+    const name = agent.name || '';
+    if (name.startsWith('NIM-')) return 'nim';
+    if (name.startsWith('Claude-') || name === 'ClaudeCode-AI') return 'anthropic';
+    // Default Gemini agents have no prefix
+    return 'gemini';
+}
+
+const _providerMeta = {
+    gemini:    { label: 'Google Gemini',   badgeClass: 'bg-info text-dark',    icon: 'fab fa-google',   cardId: 'gemini-provider-card' },
+    anthropic: { label: 'Anthropic Claude', badgeClass: 'bg-warning text-dark', icon: 'fas fa-brain',    cardId: 'anthropic-provider-card' },
+    nim:       { label: 'NVIDIA NIM',       badgeClass: 'bg-success text-dark', icon: 'fas fa-microchip', cardId: 'nim-provider-card' }
+};
+
+/**
+ * Update the active agent/provider display inside the API Keys modal.
+ * Called from selectChatAgent() whenever an agent is selected.
+ */
+CustodianAIApp.prototype._updateApiKeysAgentDisplay = function(agent) {
+    const bar = document.getElementById('api-keys-active-agent');
+    const nameEl = document.getElementById('api-keys-agent-name');
+    const specEl = document.getElementById('api-keys-agent-spec');
+    const badgeEl = document.getElementById('api-keys-provider-badge');
+
+    if (!bar) return;
+
+    if (!agent) {
+        bar.classList.add('d-none');
+        return;
+    }
+
+    const provider = _getAgentProvider(agent);
+    const meta = _providerMeta[provider] || { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'fas fa-robot' };
+
+    bar.classList.remove('d-none');
+    if (nameEl) nameEl.textContent = agent.name;
+    if (specEl) specEl.textContent = agent.specialization ? '· ' + agent.specialization : '';
+    if (badgeEl) {
+        badgeEl.className = 'badge ' + meta.badgeClass;
+        badgeEl.innerHTML = `<i class="${meta.icon} me-1"></i>${meta.label}`;
+    }
+
+    // Highlight the matching provider card in the modal
+    _highlightActiveProviderCard(provider);
+};
+
+// =============================================================================
+// MODEL SELECTOR
+// =============================================================================
+
+const _providerModels = {
+    gemini: [
+        { id: 'gemini-2.5-flash',   label: 'Gemini 2.5 Flash (default)' },
+        { id: 'gemini-2.5-pro',     label: 'Gemini 2.5 Pro' },
+        { id: 'gemini-2.0-flash',   label: 'Gemini 2.0 Flash' },
+        { id: 'gemini-1.5-pro',     label: 'Gemini 1.5 Pro' },
+        { id: 'gemini-1.5-flash',   label: 'Gemini 1.5 Flash' }
+    ],
+    anthropic: [
+        { id: 'claude-sonnet-4-5',  label: 'Claude Sonnet 4.5 (default)' },
+        { id: 'claude-opus-4-5',    label: 'Claude Opus 4.5' },
+        { id: 'claude-haiku-3-5',   label: 'Claude Haiku 3.5' },
+        { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+        { id: 'claude-3-opus-20240229',     label: 'Claude 3 Opus' }
+    ],
+    nim: [
+        { id: 'meta/llama-3.3-70b-instruct',  label: 'Llama 3.3 70B (default)' },
+        { id: 'deepseek-ai/deepseek-r1',       label: 'DeepSeek R1' },
+        { id: 'meta/llama-3.1-405b-instruct',  label: 'Llama 3.1 405B' },
+        { id: 'mistralai/mixtral-8x22b-instruct-v0.1', label: 'Mixtral 8x22B' },
+        { id: 'nvidia/llama-3.1-nemotron-70b-instruct', label: 'Nemotron 70B' }
+    ]
+};
+
+/**
+ * Open a model selector dropdown/popover for the current provider.
+ */
+CustodianAIApp.prototype.openModelSelector = function() {
+    if (!this.currentAgent) return;
+    const provider = _getAgentProvider(this.currentAgent);
+    const models = _providerModels[provider] || [];
+    const currentModel = this.currentModelOverride || null;
+
+    // Build a simple Bootstrap dropdown list as a floating div
+    const existing = document.getElementById('model-selector-popup');
+    if (existing) { existing.remove(); return; } // toggle off
+
+    const popup = document.createElement('div');
+    popup.id = 'model-selector-popup';
+    popup.className = 'model-selector-popup';
+    popup.innerHTML = `
+        <div class="model-selector-header">
+            <span class="text-info small fw-bold">Select Model</span>
+            <button class="btn btn-sm btn-icon-only text-secondary" onclick="document.getElementById('model-selector-popup').remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="model-selector-list list-unstyled mb-0">
+            ${models.map(m => `
+                <li class="model-selector-item ${currentModel === m.id ? 'active' : ''}" onclick="window.app.selectModel('${m.id}', '${m.label}')">
+                    ${m.label}
+                    ${currentModel === m.id ? '<i class="fas fa-check ms-auto text-info"></i>' : ''}
+                </li>
+            `).join('')}
+        </ul>
+    `;
+
+    // Position near the model display span
+    const anchor = document.getElementById('active-model-display');
+    if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        popup.style.position = 'fixed';
+        popup.style.top = (rect.bottom + 6) + 'px';
+        popup.style.left = rect.left + 'px';
+    }
+
+    document.body.appendChild(popup);
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', function closePopup(e) {
+            if (!popup.contains(e.target) && e.target !== anchor) {
+                popup.remove();
+                document.removeEventListener('click', closePopup);
+            }
+        });
+    }, 100);
+};
+
+/**
+ * Apply a model selection for the current provider.
+ */
+CustodianAIApp.prototype.selectModel = function(modelId, modelLabel) {
+    this.currentModelOverride = modelId;
+    // Update the display
+    const nameEl = document.getElementById('active-model-name');
+    if (nameEl) nameEl.textContent = modelLabel.replace(' (default)', '');
+    // Close popup
+    const popup = document.getElementById('model-selector-popup');
+    if (popup) popup.remove();
+    // Store in localStorage for persistence
+    localStorage.setItem('custodian_model_override_' + _getAgentProvider(this.currentAgent), modelId);
+};
+
+/**
+ * Switch the active chat agent to the first available agent for the given provider.
+ * Called by the Gemini / Claude / NIM quick-switch buttons in the API Keys modal.
+ */
+CustodianAIApp.prototype.switchToProvider = function(provider) {
+    // Map provider → agent name prefix / exact name
+    const prefixMap = {
+        gemini:    function(name) { return !name.startsWith('NIM-') && !name.startsWith('Claude-') && name !== 'ClaudeCode-AI'; },
+        anthropic: function(name) { return name.startsWith('Claude-') || name === 'ClaudeCode-AI'; },
+        nim:       function(name) { return name.startsWith('NIM-'); }
+    };
+    const matcher = prefixMap[provider];
+    if (!matcher) return;
+
+    // Find the first coordinator/main agent for that provider
+    const preferred = ['CustodianAI', 'Coordinator', 'coordinator'];
+    let target = this.agents.find(a => matcher(a.name) && preferred.some(p => a.name.includes(p)));
+    if (!target) target = this.agents.find(a => matcher(a.name));
+    if (!target) {
+        alert('No ' + provider + ' agents are currently available.');
+        return;
+    }
+
+    // Close the API Keys modal first, then select the agent
+    const apiKeysModalEl = document.getElementById('apiKeysModal');
+    if (apiKeysModalEl) {
+        const modal = bootstrap.Modal.getInstance(apiKeysModalEl);
+        if (modal) modal.hide();
+    }
+
+    // Small delay to let modal close before updating UI
+    setTimeout(() => {
+        this.selectChatAgent(target);
+    }, 300);
+};
+
+/**
+ * Add/remove a highlight ring on the provider card that matches the active agent.
+ */
+function _highlightActiveProviderCard(activeProvider) {
+    // Map provider key → the card's border-secondary class parent
+    const providerCardMap = {
+        gemini:    'gemini-key-input',
+        anthropic: 'anthropic-key-input',
+        nim:       'nim-key-input'
+    };
+
+    Object.keys(providerCardMap).forEach(function(p) {
+        const inputEl = document.getElementById(providerCardMap[p]);
+        if (!inputEl) return;
+        const card = inputEl.closest('.card');
+        if (!card) return;
+        if (p === activeProvider) {
+            card.classList.add('provider-card-active');
+        } else {
+            card.classList.remove('provider-card-active');
+        }
     });
 }
