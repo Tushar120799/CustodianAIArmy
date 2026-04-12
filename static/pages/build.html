@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custodian AI — Build Your Product</title>
+    <link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <style>
+        body { padding-top: 60px; }
+        .coming-soon-hero { text-align: center; padding: 5rem 2rem; max-width: 700px; margin: 0 auto; }
+        .coming-soon-icon { font-size: 5rem; color: var(--primary-color); margin-bottom: 1.5rem; animation: pulse-glow 2s infinite; }
+        .feature-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+        .feature-preview-card { background: var(--secondary-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; opacity: 0.7; }
+        .feature-preview-card i { font-size: 2rem; color: var(--primary-color); margin-bottom: 0.75rem; display: block; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header class="header fixed-top">
+        <div class="header-content container-fluid px-3 py-1">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-icon-only text-info p-0" id="hamburger-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas">
+                    <i class="fas fa-bars fa-lg"></i>
+                </button>
+                <a href="/" class="d-flex align-items-center gap-2 text-decoration-none" style="color:var(--primary-color);">
+                    <i class="fas fa-robot fa-2x"></i>
+                    <h1 class="m-0 h5">Custodian AI</h1>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-icon-only text-info p-0 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <span id="user-avatar"><i class="fas fa-user-circle fa-2x"></i></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end bg-dark border-secondary">
+                        <li><span class="dropdown-item-text text-info" id="user-display-name">Guest</span></li>
+                        <li><hr class="dropdown-divider border-secondary"></li>
+                        <li id="guest-login-item"><a class="dropdown-item text-info" href="/api/v1/auth/google"><i class="fab fa-google me-2"></i>Sign In</a></li>
+                        <li id="logout-item" style="display:none;"><button class="dropdown-item text-danger" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button></li>
+                        <li><hr class="dropdown-divider border-secondary"></li>
+                        <li><div class="dropdown-item d-flex align-items-center gap-2"><span class="text-muted small">Dark Mode</span><div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="darkModeToggle"></div></div></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <nav class="nav flex-column nav-menu p-2">
+                <a class="nav-link nav-item" href="/dashboard"><i class="fas fa-brain me-2"></i>AI Dashboard</a>
+                <a class="nav-link nav-item" href="/learn"><i class="fas fa-graduation-cap me-2"></i>Learn with AI</a>
+                <a class="nav-link nav-item" href="/portfolio"><i class="fab fa-github me-2"></i>Portfolio Builder</a>
+                <a class="nav-link nav-item active" href="/build"><i class="fas fa-cubes me-2"></i>Build Your Product</a>
+                <hr class="border-secondary my-2">
+                <a class="nav-link nav-item" href="/"><i class="fas fa-home me-2"></i>Home</a>
+            </nav>
+        </div>
+    </div>
+
+    <nav class="page-nav" style="padding-top:60px;">
+        <a href="/dashboard"><i class="fas fa-brain"></i> AI Dashboard</a>
+        <a href="/learn"><i class="fas fa-graduation-cap"></i> Learn with AI</a>
+        <a href="/portfolio"><i class="fab fa-github"></i> Portfolio Builder</a>
+        <a href="/build" class="active"><i class="fas fa-cubes"></i> Build Your Product</a>
+    </nav>
+
+    <div class="content-area" style="padding-top:0;">
+        <div class="coming-soon-hero">
+            <div class="coming-soon-icon"><i class="fas fa-cubes"></i></div>
+            <h2 style="color:var(--primary-color);margin-bottom:1rem;">Build Your Product</h2>
+            <p class="text-secondary" style="font-size:1.1rem;margin-bottom:1.5rem;">
+                Turn your idea into a real product with an AI army by your side. From architecture to deployment — your AI team handles the heavy lifting.
+            </p>
+            <span class="badge bg-warning text-dark px-3 py-2" style="font-size:1rem;">🚀 Coming Soon</span>
+
+            <div class="feature-preview-grid">
+                <div class="feature-preview-card">
+                    <i class="fas fa-sitemap"></i>
+                    <strong>AI Architecture</strong>
+                    <p class="text-muted small mt-1">Describe your idea, get a full system architecture</p>
+                </div>
+                <div class="feature-preview-card">
+                    <i class="fas fa-code"></i>
+                    <strong>Code Generation</strong>
+                    <p class="text-muted small mt-1">Multi-agent code generation across your entire stack</p>
+                </div>
+                <div class="feature-preview-card">
+                    <i class="fas fa-tasks"></i>
+                    <strong>Project Planning</strong>
+                    <p class="text-muted small mt-1">AI-generated roadmaps, sprints, and task breakdowns</p>
+                </div>
+                <div class="feature-preview-card">
+                    <i class="fas fa-rocket"></i>
+                    <strong>Deploy & Launch</strong>
+                    <p class="text-muted small mt-1">One-click deployment with CI/CD pipeline setup</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="/dashboard" class="btn btn-outline-info me-2"><i class="fas fa-brain me-2"></i>Try AI Dashboard</a>
+                <a href="/" class="btn btn-outline-secondary"><i class="fas fa-home me-2"></i>Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/shared.js"></script>
+</body>
+</html>

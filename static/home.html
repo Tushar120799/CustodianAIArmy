@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custodian AI Army — Your AI-Powered Command Center</title>
+    <meta name="description" content="Deploy an army of AI agents to learn, build, and create. Free to try, no signup required.">
+    <link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #0f0f1a;
+            --bg3: #141428;
+            --card: #12121f;
+            --border: rgba(77, 171, 247, 0.15);
+            --border-hover: rgba(77, 171, 247, 0.5);
+            --primary: #4dabf7;
+            --primary-glow: rgba(77, 171, 247, 0.3);
+            --accent: #7c3aed;
+            --accent2: #06b6d4;
+            --text: #e8e8f0;
+            --text2: #9090b0;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── Grid Background ── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(77,171,247,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(77,171,247,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Nav ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--primary);
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+        }
+        .nav-logo i { font-size: 1.6rem; filter: drop-shadow(0 0 8px var(--primary)); }
+        .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-links a {
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--primary); }
+        .nav-cta {
+            background: var(--primary);
+            color: #000 !important;
+            padding: 0.5rem 1.25rem;
+            border-radius: 4px;
+            font-weight: 700 !important;
+            transition: box-shadow 0.2s !important;
+        }
+        .nav-cta:hover { box-shadow: 0 0 20px var(--primary-glow) !important; color: #000 !important; }
+
+        /* ── Sections ── */
+        section { position: relative; z-index: 1; }
+
+        /* ── Hero ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(77,171,247,0.1);
+            border: 1px solid var(--border-hover);
+            color: var(--primary);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease;
+        }
+        .hero h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInDown 0.7s ease;
+        }
+        .hero h1 .glow {
+            color: var(--primary);
+            text-shadow: 0 0 30px var(--primary-glow), 0 0 60px rgba(77,171,247,0.2);
+        }
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text2);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            animation: fadeInDown 0.8s ease;
+        }
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeInDown 0.9s ease;
+        }
+        .btn-hero-primary {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .btn-hero-primary:hover { box-shadow: 0 0 30px var(--primary-glow); transform: translateY(-2px); color: #000; }
+        .btn-hero-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 0.875rem 2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .btn-hero-secondary:hover { background: rgba(77,171,247,0.1); box-shadow: 0 0 20px var(--primary-glow); color: var(--primary); }
+
+        .hero-stats {
+            display: flex;
+            gap: 3rem;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeInUp 1s ease;
+        }
+        .hero-stat { text-align: center; }
+        .hero-stat-num { font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; color: var(--primary); display: block; }
+        .hero-stat-label { font-size: 0.8rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* ── Section Titles ── */
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .section-title h2 {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 900;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+        .section-title h2 span { color: var(--primary); }
+        .section-title p { color: var(--text2); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+        .section-divider {
+            width: 60px; height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            margin: 0.75rem auto 0;
+            border-radius: 2px;
+        }
+
+        /* ── Features ── */
+        .features { padding: 6rem 2rem; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .feature-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 40px rgba(77,171,247,0.1);
+            color: var(--text);
+        }
+        .feature-icon {
+            width: 56px; height: 56px;
+            background: rgba(77,171,247,0.1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        .feature-card h3 { font-family: 'Orbitron', monospace; font-size: 1rem; color: var(--primary); }
+        .feature-card p { color: var(--text2); font-size: 0.9rem; flex: 1; }
+        .feature-link { color: var(--primary); font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+        .feature-badge { font-size: 0.7rem; background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid var(--warning); padding: 0.15rem 0.5rem; border-radius: 10px; }
+
+        /* ── How It Works ── */
+        .how-it-works { padding: 6rem 2rem; background: var(--bg2); }
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .step-card { text-align: center; padding: 2rem 1rem; }
+        .step-num {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #000;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+        .step-card h3 { font-family: 'Orbitron', monospace; font-size: 1rem; color: var(--primary); margin-bottom: 0.5rem; }
+        .step-card p { color: var(--text2); font-size: 0.9rem; }
+
+        /* ── Pricing ── */
+        .pricing { padding: 6rem 2rem; }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .pricing-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+        .pricing-card.featured {
+            border-color: var(--primary);
+            box-shadow: 0 0 40px rgba(77,171,247,0.15);
+        }
+        .pricing-badge {
+            position: absolute;
+            top: -12px; left: 50%; transform: translateX(-50%);
+            background: var(--primary);
+            color: #000;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 1rem;
+            border-radius: 10px;
+        }
+        .pricing-plan { font-family: 'Orbitron', monospace; font-size: 1.1rem; color: var(--text2); margin-bottom: 0.5rem; }
+        .pricing-price { font-family: 'Orbitron', monospace; font-size: 3rem; font-weight: 900; color: var(--primary); margin-bottom: 0.25rem; }
+        .pricing-price span { font-size: 1rem; color: var(--text2); }
+        .pricing-desc { color: var(--text2); font-size: 0.875rem; margin-bottom: 2rem; }
+        .pricing-features { list-style: none; text-align: left; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .pricing-features li { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text2); }
+        .pricing-features li i { color: var(--success); width: 16px; }
+        .pricing-features li.disabled { opacity: 0.4; }
+        .pricing-features li.disabled i { color: var(--text2); }
+        .pricing-btn {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .pricing-btn-primary { background: var(--primary); color: #000; border: none; }
+        .pricing-btn-primary:hover { box-shadow: 0 0 20px var(--primary-glow); color: #000; }
+        .pricing-btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .pricing-btn-outline:hover { background: rgba(77,171,247,0.1); color: var(--primary); }
+
+        /* ── Coming Soon ── */
+        .coming-soon { padding: 6rem 2rem; background: var(--bg2); }
+        .coming-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .coming-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            opacity: 0.75;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+        .coming-card:hover { opacity: 1; border-color: var(--border-hover); }
+        .coming-card i { font-size: 2rem; color: var(--accent2); margin-bottom: 0.75rem; display: block; }
+        .coming-card h4 { font-size: 0.95rem; color: var(--text); margin-bottom: 0.4rem; }
+        .coming-card p { font-size: 0.8rem; color: var(--text2); }
+        .coming-tag { display: inline-block; background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px; margin-top: 0.5rem; }
+
+        /* ── CTA Banner ── */
+        .cta-banner {
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+        .cta-inner {
+            max-width: 700px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(77,171,247,0.08), rgba(124,58,237,0.08));
+            border: 1px solid var(--border-hover);
+            border-radius: 16px;
+            padding: 4rem 2rem;
+        }
+        .cta-inner h2 { font-family: 'Orbitron', monospace; font-size: clamp(1.5rem, 3vw, 2.5rem); color: var(--primary); margin-bottom: 1rem; }
+        .cta-inner p { color: var(--text2); margin-bottom: 2rem; }
+
+        /* ── Footer ── */
+        footer {
+            background: var(--bg2);
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem 2rem;
+        }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 3rem;
+        }
+        .footer-brand { display: flex; flex-direction: column; gap: 0.75rem; }
+        .footer-logo { display: flex; align-items: center; gap: 0.75rem; color: var(--primary); font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1rem; }
+        .footer-logo i { font-size: 1.4rem; }
+        .footer-desc { color: var(--text2); font-size: 0.875rem; max-width: 280px; }
+        .footer-col h4 { color: var(--text); font-size: 0.875rem; font-weight: 700; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .footer-col a { display: block; color: var(--text2); text-decoration: none; font-size: 0.875rem; margin-bottom: 0.5rem; transition: color 0.2s; }
+        .footer-col a:hover { color: var(--primary); }
+        .footer-bottom { max-width: 1200px; margin: 2rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .footer-bottom p { color: var(--text2); font-size: 0.8rem; }
+
+        /* ── Animations ── */
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .float { animation: float 4s ease-in-out infinite; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            nav { padding: 0.75rem 1rem; }
+            .nav-links { display: none; }
+            .hero { padding: 6rem 1.5rem 3rem; }
+            .hero-stats { gap: 2rem; }
+            .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
+            .footer-bottom { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+    <a href="/" class="nav-logo">
+        <i class="fas fa-robot float"></i>
+        Custodian AI
+    </a>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#coming-soon">Roadmap</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/api/v1/auth/google" class="nav-cta"><i class="fab fa-google"></i> Sign In</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">
+        <i class="fas fa-bolt"></i>
+        Powered by Groq · Gemini · Claude · NIM
+    </div>
+    <h1>
+        Deploy Your<br>
+        <span class="glow">AI Army</span>
+    </h1>
+    <p>A multi-agent AI platform that learns, builds, and creates alongside you. Free to try — no signup required.</p>
+    <div class="hero-ctas">
+        <a href="/dashboard" class="btn-hero-primary">
+            <i class="fas fa-rocket"></i> Try Free Now
+        </a>
+        <a href="/api/v1/auth/google" class="btn-hero-secondary">
+            <i class="fab fa-google"></i> Sign In with Google
+        </a>
+    </div>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <span class="hero-stat-num">20+</span>
+            <span class="hero-stat-label">AI Agents</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num">4</span>
+            <span class="hero-stat-label">AI Providers</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num">Free</span>
+            <span class="hero-stat-label">To Start</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num">∞</span>
+            <span class="hero-stat-label">Possibilities</span>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+    <div class="section-title">
+        <h2>Everything You Need to <span>Build with AI</span></h2>
+        <div class="section-divider"></div>
+        <p>Four powerful tools, one platform. Each designed to supercharge a different part of your workflow.</p>
+    </div>
+    <div class="features-grid">
+        <a href="/dashboard" class="feature-card">
+            <div class="feature-icon"><i class="fas fa-brain"></i></div>
+            <h3>AI Dashboard</h3>
+            <p>Chat with a specialized army of AI agents — researchers, coders, analysts, writers, and more. Switch providers on the fly.</p>
+            <div class="feature-link"><i class="fas fa-arrow-right"></i> Open Dashboard</div>
+        </a>
+        <a href="/learn" class="feature-card">
+            <div class="feature-icon"><i class="fas fa-graduation-cap"></i></div>
+            <h3>Learn with AI</h3>
+            <p>Interactive programming courses with an AI tutor by your side. Python, JavaScript, React, and more — with a live code playground.</p>
+            <div class="feature-link"><i class="fas fa-arrow-right"></i> Start Learning</div>
+        </a>
+        <a href="/portfolio" class="feature-card">
+            <div class="feature-icon"><i class="fab fa-github"></i></div>
+            <h3>Portfolio Builder</h3>
+            <p>AI-generated developer portfolios. Connect GitHub, describe yourself, and get a stunning portfolio deployed in minutes.</p>
+            <div class="feature-link"><span class="feature-badge">Coming Soon</span></div>
+        </a>
+        <a href="/build" class="feature-card">
+            <div class="feature-icon"><i class="fas fa-cubes"></i></div>
+            <h3>Build Your Product</h3>
+            <p>From idea to deployed product with an AI army. Architecture, code generation, project planning, and one-click deployment.</p>
+            <div class="feature-link"><span class="feature-badge">Coming Soon</span></div>
+        </a>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works">
+    <div class="section-title">
+        <h2>How It <span>Works</span></h2>
+        <div class="section-divider"></div>
+        <p>Get started in seconds. No complex setup required.</p>
+    </div>
+    <div class="steps-grid">
+        <div class="step-card">
+            <div class="step-num">1</div>
+            <h3>Try Free</h3>
+            <p>Visit the dashboard as a guest — no account needed. Get 3 free requests instantly.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-num">2</div>
+            <h3>Sign In</h3>
+            <p>Sign in with Google to unlock 20 requests/day, chat history, and all AI providers.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-num">3</div>
+            <h3>Build</h3>
+            <p>Choose your AI agent, pick your feature, and let your AI army do the heavy lifting.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing" id="pricing">
+    <div class="section-title">
+        <h2>Simple, <span>Transparent</span> Pricing</h2>
+        <div class="section-divider"></div>
+        <p>Start free. Upgrade when you need more power.</p>
+    </div>
+    <div class="pricing-grid">
+        <div class="pricing-card">
+            <div class="pricing-plan">Free</div>
+            <div class="pricing-price">$0<span>/mo</span></div>
+            <div class="pricing-desc">Perfect for trying out the platform</div>
+            <ul class="pricing-features">
+                <li><i class="fas fa-check"></i> 3 requests/day as guest</li>
+                <li><i class="fas fa-check"></i> 20 requests/day (signed in)</li>
+                <li><i class="fas fa-check"></i> All AI agents</li>
+                <li><i class="fas fa-check"></i> NIM provider (guest)</li>
+                <li><i class="fas fa-check"></i> Groq + Gemini (signed in)</li>
+                <li><i class="fas fa-check"></i> Learn with AI courses</li>
+                <li class="disabled"><i class="fas fa-times"></i> Claude provider</li>
+                <li class="disabled"><i class="fas fa-times"></i> Priority processing</li>
+            </ul>
+            <a href="/dashboard" class="pricing-btn pricing-btn-outline">Get Started Free</a>
+        </div>
+        <div class="pricing-card featured">
+            <div class="pricing-badge">Most Popular</div>
+            <div class="pricing-plan">Pro</div>
+            <div class="pricing-price">$9<span>/mo</span></div>
+            <div class="pricing-desc">For power users and professionals</div>
+            <ul class="pricing-features">
+                <li><i class="fas fa-check"></i> 50 requests/day</li>
+                <li><i class="fas fa-check"></i> All AI agents</li>
+                <li><i class="fas fa-check"></i> All providers (Groq, Gemini, Claude, NIM)</li>
+                <li><i class="fas fa-check"></i> Priority processing</li>
+                <li><i class="fas fa-check"></i> Chat history saved</li>
+                <li><i class="fas fa-check"></i> Learn with AI + progress tracking</li>
+                <li><i class="fas fa-check"></i> Early access to new features</li>
+                <li><i class="fas fa-check"></i> Email support</li>
+            </ul>
+            <a href="/payment.html" class="pricing-btn pricing-btn-primary">Upgrade to Pro</a>
+        </div>
+    </div>
+</section>
+
+<!-- Coming Soon -->
+<section class="coming-soon" id="coming-soon">
+    <div class="section-title">
+        <h2>What's <span>Coming Next</span></h2>
+        <div class="section-divider"></div>
+        <p>We're building fast. Here's what's on the roadmap.</p>
+    </div>
+    <div class="coming-grid">
+        <div class="coming-card">
+            <i class="fas fa-robot"></i>
+            <h4>Custom Agents</h4>
+            <p>Build and train your own specialized AI agents with custom prompts, tools, and personas</p>
+            <span class="coming-tag">Apr 14, 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fas fa-memory"></i>
+            <h4>Long-Term Memory</h4>
+            <p>Agents that remember your preferences, projects, and past conversations across sessions</p>
+            <span class="coming-tag">Apr 16, 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fab fa-github"></i>
+            <h4>Portfolio Builder & Build Your Product</h4>
+            <p>AI-generated portfolios and full product development — from idea to deployed app</p>
+            <span class="coming-tag">Apr 18, 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fas fa-plug"></i>
+            <h4>API Access</h4>
+            <p>Integrate Custodian AI agents directly into your own apps via REST API</p>
+            <span class="coming-tag">Apr 20, 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fas fa-sync-alt"></i>
+            <h4>Remote Control & Cross-Device Sessions</h4>
+            <p>Access your laptop sessions from mobile — both devices stay in sync so you can pick up exactly where you left off</p>
+            <span class="coming-tag">Apr 22, 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fas fa-code-branch"></i>
+            <h4>AI Code Review</h4>
+            <p>Paste your code and get a full review with suggestions from multiple AI agents</p>
+            <span class="coming-tag">May 2026</span>
+        </div>
+        <div class="coming-card">
+            <i class="fas fa-users"></i>
+            <h4>Team Workspaces</h4>
+            <p>Collaborate with your team using shared AI agents and project contexts</p>
+            <span class="coming-tag">May 2026</span>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Banner -->
+<section class="cta-banner">
+    <div class="cta-inner">
+        <h2>Ready to Deploy Your AI Army?</h2>
+        <p>Join thousands of developers, learners, and builders using Custodian AI. Start free — no credit card required.</p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="/dashboard" class="btn-hero-primary"><i class="fas fa-rocket"></i> Start for Free</a>
+            <a href="/api/v1/auth/google" class="btn-hero-secondary"><i class="fab fa-google"></i> Sign In with Google</a>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="footer-logo"><i class="fas fa-robot"></i> Custodian AI Army</div>
+            <p class="footer-desc">A multi-agent AI platform for learning, building, and creating. Powered by the best AI models in the world.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Platform</h4>
+            <a href="/dashboard">AI Dashboard</a>
+            <a href="/learn">Learn with AI</a>
+            <a href="/portfolio">Portfolio Builder</a>
+            <a href="/build">Build Your Product</a>
+        </div>
+        <div class="footer-col">
+            <h4>Account</h4>
+            <a href="/api/v1/auth/google">Sign In with Google</a>
+            <a href="/payment.html">Upgrade to Pro</a>
+            <a href="/dashboard">Try as Guest</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>© 2026 Custodian AI Army. Built with ❤️ and a lot of AI.</p>
+        <p style="color:var(--text2);font-size:0.8rem;">Powered by Groq · Gemini · Claude · NIM</p>
+    </div>
+</footer>
+
+</body>
+</html>

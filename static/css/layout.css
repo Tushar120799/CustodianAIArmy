@@ -1,0 +1,178 @@
+/* ============================================================
+   LAYOUT.CSS — Header, Sidebar, Nav, App Shell, Responsive
+   ============================================================ */
+
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+    background: var(--secondary-bg);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--primary-color);
+}
+.logo h1 {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--primary-color);
+    margin: 0;
+}
+.logo i { font-size: 1.8rem; color: var(--primary-color); }
+
+.header-stats { display: flex; gap: 1.5rem; }
+.stat-item { text-align: center; }
+.stat-label { display: block; font-size: 0.75rem; color: var(--text-muted); }
+.stat-value { display: block; font-size: 1rem; font-weight: 600; color: var(--primary-color); }
+.status-online { color: var(--success-color); }
+
+/* ── Main Layout ── */
+.main-content {
+    display: flex;
+    flex: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    width: 250px;
+    background: var(--secondary-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 2rem 0;
+    flex-shrink: 0;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 1rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    background: var(--secondary-bg);
+    border: 1px solid transparent;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+.nav-item:hover { background: var(--tertiary-bg); border-color: var(--border-color); color: var(--text-primary); }
+.nav-item.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+.nav-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+
+/* ── Content Area ── */
+.content-area {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.section-header { margin-bottom: 2rem; }
+.section-header h2 { font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--primary-color); }
+.section-header p { color: var(--text-secondary); font-size: 1rem; }
+
+/* ── Offcanvas Sidebar (mobile) ── */
+.offcanvas { background: var(--secondary-bg); color: var(--text-primary); border-right: 1px solid var(--border-color); }
+.offcanvas-title { font-family: 'Orbitron', 'Exo 2', sans-serif; letter-spacing: 1px; color: var(--primary-color); }
+
+/* ── Page Nav Bar (top of each app page) ── */
+.page-nav {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--secondary-bg);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+.page-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+    border: 1px solid transparent;
+}
+.page-nav a:hover { background: var(--tertiary-bg); color: var(--text-primary); }
+.page-nav a.active { background: var(--primary-color); color: white; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        width: 220px;
+        height: 100%;
+        z-index: 200;
+        transition: left 0.3s;
+        box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+    }
+    .sidebar.open { left: 0; }
+
+    .burger-btn {
+        display: block;
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .content-area { padding: 1rem 0.75rem; }
+    .main-content { flex-direction: column; }
+    .header-stats { display: none; }
+}
+
+@media (min-width: 901px) {
+    .burger-btn { display: none; }
+}
+
+/* ── Auth Modal ── */
+.auth-wrapper {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-bg);
+    z-index: 10000;
+}

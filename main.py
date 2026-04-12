@@ -46,16 +46,42 @@ app.include_router(auth_router)
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Serve the main UI
+from fastapi.responses import FileResponse
+
+# ── Page Routes ──────────────────────────────────────────────────────────────
+
 @app.get("/")
-async def read_root():
-    """Serve the main dashboard"""
-    from fastapi.responses import FileResponse
+async def homepage():
+    """Serve the futuristic homepage"""
+    return FileResponse("static/home.html")
+
+@app.get("/app")
+async def legacy_app():
+    """Serve the legacy single-page app (old index.html)"""
     return FileResponse("static/index.html")
+
+@app.get("/dashboard")
+async def dashboard_page():
+    """Serve the AI Dashboard page"""
+    return FileResponse("static/pages/dashboard.html")
+
+@app.get("/learn")
+async def learn_page():
+    """Serve the Learn with AI page"""
+    return FileResponse("static/pages/learn.html")
+
+@app.get("/portfolio")
+async def portfolio_page():
+    """Serve the Portfolio Builder page"""
+    return FileResponse("static/pages/portfolio.html")
+
+@app.get("/build")
+async def build_page():
+    """Serve the Build Your Product page"""
+    return FileResponse("static/pages/build.html")
 
 @app.get("/payment.html")
 async def payment_page():
-    from fastapi.responses import FileResponse
     return FileResponse("static/payment.html")
 
 if __name__ == "__main__":

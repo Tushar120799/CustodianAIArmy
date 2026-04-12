@@ -1,0 +1,230 @@
+/* ============================================================
+   LEARN.CSS — Course Viewer, Slides, Progress, AI Tutor
+   Used by: /learn
+   ============================================================ */
+
+/* ── Course Grid ── */
+.learning-paths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.learning-path-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: var(--transition-normal);
+    cursor: pointer;
+}
+.learning-path-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+
+.path-icon { margin-bottom: 1rem; color: var(--primary-color); font-size: 2rem; }
+.path-title { font-size: 1rem; color: var(--text-primary); margin-bottom: 0.5rem; font-weight: 600; }
+.path-description { color: var(--text-secondary); font-size: 0.875rem; line-height: 1.5; margin-bottom: 1.25rem; flex: 1; }
+.path-footer { width: 100%; }
+
+/* ── Category Filter ── */
+.category-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.category-filter-bar button {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+/* ── Course Detail Layout ── */
+.course-detail-layout {
+    display: flex;
+    height: calc(100vh - 160px);
+    min-height: 600px;
+    gap: 0;
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* ── Course Sidebar ── */
+.course-sidebar {
+    width: 280px;
+    background: var(--secondary-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.course-sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.course-sidebar-header h5 { color: var(--primary-color); margin-bottom: 0.5rem; font-size: 0.95rem; }
+
+.course-progress-bar-wrap {
+    height: 6px;
+    background: var(--tertiary-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+.course-progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.course-module-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+.course-module-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+}
+.course-module-item:hover { background: var(--tertiary-bg); color: var(--text-primary); }
+.course-module-item.active { background: rgba(0,123,255,0.1); color: var(--primary-color); border-color: var(--primary-color); }
+.course-module-item.completed { color: var(--success-color); }
+.course-module-item .module-icon { width: 18px; text-align: center; flex-shrink: 0; }
+
+/* ── Course Content Area ── */
+.course-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.course-content-header {
+    padding: 0.875rem 1.25rem;
+    background: var(--tertiary-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.course-content-header h3 { color: var(--primary-color); font-size: 1rem; margin: 0; }
+
+.course-slide-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    line-height: 1.7;
+}
+
+/* ── Terminal Section ── */
+.course-terminal-section {
+    border-top: 1px solid var(--border-color);
+    background: var(--primary-bg);
+    flex-shrink: 0;
+}
+.course-terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    background: var(--tertiary-bg);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.course-code-editor {
+    width: 100%;
+    min-height: 120px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    resize: vertical;
+}
+.course-terminal-output {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 0.75rem 1rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    min-height: 60px;
+    max-height: 150px;
+    overflow-y: auto;
+    border-top: 1px solid #333;
+}
+
+/* ── AI Assist Panel ── */
+.course-ai-panel {
+    width: 320px;
+    background: var(--secondary-bg);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+.course-ai-header {
+    padding: 0.875rem 1rem;
+    background: var(--tertiary-bg);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+.course-ai-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.course-ai-input-area {
+    padding: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+/* ── Learn Section Controls ── */
+.learn-section-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+    .course-detail-layout { flex-direction: column; height: auto; }
+    .course-sidebar { width: 100%; height: 200px; border-right: none; border-bottom: 1px solid var(--border-color); }
+    .course-ai-panel { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
+    .learning-paths-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
