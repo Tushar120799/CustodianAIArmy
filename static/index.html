@@ -79,8 +79,11 @@
                     
                     <!-- User Profile Dropdown -->
                     <div class="dropdown">
-                        <button class="btn btn-icon-only text-info p-0 dropdown-toggle" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user-circle fa-lg"></i>
+                        <button class="btn p-0 dropdown-toggle" type="button" id="userProfileDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                style="background:none;border:1px solid var(--accent-cyan);border-radius:4px;padding:0.4rem 0.75rem !important;display:flex;align-items:center;gap:0.4rem;color:var(--accent-cyan);font-weight:600;font-size:0.875rem;">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span id="user-profile-name" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">User</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userProfileDropdown" style="background: var(--gradient-dark); border: 1px solid var(--accent-cyan);">
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i> Edit Details</a></li>
@@ -809,16 +812,16 @@ print(f'Hello, {name}!')
         }
 
         function updateUserProfile(user) {
-            const profileIcon = document.getElementById('user-profile-img');
+            // Icon-only approach — no avatar image, just show first name
             const profileName = document.getElementById('user-profile-name');
             const editNameInput = document.getElementById('profileNameInput');
             const editEmailInput = document.getElementById('profileEmailInput');
-            
-            if (profileIcon && user.picture) profileIcon.src = user.picture;
-            if (profileName && user.name) profileName.textContent = user.name.split(' ')[0]; // Show first name
-            
-            if (editNameInput) editNameInput.value = user.name || '';
-            if (editEmailInput) editEmailInput.value = user.email || '';
+            const guestLoginItem = document.getElementById('guest-login-item');
+
+            if (profileName && user && user.name) profileName.textContent = user.name.split(' ')[0];
+            if (editNameInput) editNameInput.value = (user && user.name) || '';
+            if (editEmailInput) editEmailInput.value = (user && user.email) || '';
+            if (guestLoginItem) guestLoginItem.style.display = user ? 'none' : '';
         }
 
         function saveProfileDetails() {

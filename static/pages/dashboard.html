@@ -18,6 +18,13 @@
         /* Dashboard-specific: body padding accounts for fixed header + sub-header */
         body { padding-top: 96px; }
         @media (max-width: 768px) { body { padding-top: 90px; } }
+
+        /* Fix mobile: section-header h2 must not be clipped by sub-header */
+        .section-header h2 {
+            font-size: clamp(1rem, 4vw, 1.5rem);
+            white-space: normal;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -96,11 +103,6 @@
         </div>
         <div class="sub-header-divider"></div>
         <div class="sub-header-stat">
-            <span class="stat-label">Tasks Completed</span>
-            <span class="stat-value" id="tasks-completed">0</span>
-        </div>
-        <div class="sub-header-divider"></div>
-        <div class="sub-header-stat">
             <span class="stat-label">System Status</span>
             <span class="stat-value status-online" id="system-status">Online</span>
         </div>
@@ -137,10 +139,12 @@
             <div class="content-area">
 
                 <!-- Dashboard Section -->
-                <section id="dashboard" class="content-section">
-                    <div class="section-header">
-                        <h2>Custodian AI Dashboard</h2>
-                        <p>Select an agent from the list to start a conversation.</p>
+                <section id="dashboard" class="content-section active">
+                    <div class="page-header-box mb-3">
+                        <div class="section-header mb-0">
+                            <h2><i class="fas fa-brain me-2"></i>Custodian AI Dashboard</h2>
+                            <p>Select an agent from the list to start a conversation.</p>
+                        </div>
                     </div>
                     <div class="chat-container chat-container-desktop">
                         <!-- Top Section for Agents and Info -->
@@ -179,6 +183,11 @@
                                     <i class="fas fa-robot"></i>
                                     <p>Welcome to the Custodian AI Army!</p>
                                     <p>Select an agent to begin your conversation.</p>
+                                    <button class="btn btn-outline-info btn-sm mt-2"
+                                        data-bs-toggle="modal" data-bs-target="#agentSelectModal"
+                                        style="font-size:0.85rem;letter-spacing:0.05em;">
+                                        <i class="fas fa-users me-1"></i> Click here to choose an agent
+                                    </button>
                                 </div>
                             </div>
                             <div class="chat-options-bar d-flex align-items-center gap-2 px-3 py-2" style="border-top:1px solid var(--border-color);background:rgba(77,171,247,0.03);">
@@ -209,201 +218,6 @@
                     </div>
                 </section>
 
-                <!-- Learn With AI Section -->
-                <section id="learn" class="content-section">
-                    <!-- Language Toggle — only on Learn section -->
-                    <div class="learn-section-controls d-flex align-items-center justify-content-between mb-2" id="learn-section-controls">
-                        <div class="lang-toggle d-flex gap-1" id="learn-lang-toggle">
-                            <button class="btn btn-sm btn-outline-info active" id="learn-lang-en-btn" onclick="setLanguage('en')">EN</button>
-                            <button class="btn btn-sm btn-outline-secondary" id="learn-lang-de-btn" onclick="setLanguage('de')">DE</button>
-                        </div>
-                    </div>
-                    <div class="section-header d-flex justify-content-between align-items-start flex-wrap gap-2">
-                        <div>
-                            <h2>Learn with AI</h2>
-                            <p>Choose a learning path to begin your journey. Each path includes AI-guided lessons and a real-time code editor.</p>
-                        </div>
-                        <!-- Category Filter -->
-                        <div class="d-flex flex-wrap gap-2 align-items-center" id="category-filter-bar">
-                            <button class="btn btn-sm btn-info active" data-category="all" onclick="filterCourses('all', this)">All</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="Python" onclick="filterCourses('Python', this)">Python</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="JavaScript" onclick="filterCourses('JavaScript', this)">JavaScript</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="React" onclick="filterCourses('React', this)">React</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="TypeScript" onclick="filterCourses('TypeScript', this)">TypeScript</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="Frontend" onclick="filterCourses('Frontend', this)">Frontend</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="Node.js" onclick="filterCourses('Node.js', this)">Node.js</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="Databases" onclick="filterCourses('Databases', this)">Databases</button>
-                            <button class="btn btn-sm btn-outline-info" data-category="Tools" onclick="filterCourses('Tools', this)">Tools</button>
-                        </div>
-                    </div>
-                    <div class="learning-paths-grid" id="learning-paths-grid"></div>
-                </section>
-
-                <!-- Course Detail Section -->
-                <section id="course-detail" class="content-section">
-                    <div class="course-detail-layout">
-                        <aside class="course-sidebar" id="course-sidebar">
-                            <div class="course-sidebar-header">
-                                <button class="btn btn-sm btn-outline-secondary mb-3" onclick="window.app.showSection('learn')">
-                                    <i class="fas fa-arrow-left me-1"></i> Back to Courses
-                                </button>
-                                <h5 id="course-sidebar-title" style="color:var(--primary-color);">Course Modules</h5>
-                                <div class="course-progress-bar mb-3">
-                                    <div class="d-flex justify-content-between small mb-1" style="color:var(--text-muted);">
-                                        <span>Progress</span>
-                                        <span id="course-progress-pct">0%</span>
-                                    </div>
-                                    <div class="progress" style="height: 6px; background:var(--tertiary-bg);">
-                                        <div class="progress-bar" id="course-progress-fill" role="progressbar" style="width: 0%; background:var(--primary-color);"></div>
-                                    </div>
-                                    <div class="small mt-1" style="color:var(--text-muted);"><span id="course-completed-count">0</span> / <span id="course-total-count">0</span> modules completed</div>
-                                </div>
-                            </div>
-                            <nav class="course-module-list" id="course-module-list"></nav>
-                        </aside>
-                        <div class="course-main-content">
-                            <div class="course-content-header" id="course-content-header">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <div>
-                                        <h3 id="course-section-title" style="color:var(--primary-color);" class="mb-1">Section Title</h3>
-                                        <span class="badge bg-secondary" id="course-lang-badge">EN</span>
-                                        <span class="badge ms-1" style="background:var(--primary-color);color:#000;" id="course-section-badge">1 / 1</span>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-secondary" id="prev-section-btn" onclick="window.app.navigateSection(-1)" disabled>
-                                            <i class="fas fa-chevron-left"></i> Prev
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" id="mark-complete-btn" onclick="window.app.markSectionComplete()">
-                                            <i class="fas fa-check me-1"></i> Mark Complete
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary" id="next-section-btn" onclick="window.app.navigateSection(1)">
-                                            Next <i class="fas fa-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="course-slide-content markdown-body" id="course-slide-content">
-                                <div class="text-center py-5" style="color:var(--text-muted);">
-                                    <i class="fas fa-book-open fa-3x mb-3"></i>
-                                    <p>Select a module to start learning</p>
-                                </div>
-                            </div>
-                            <div class="course-terminal-section" id="course-terminal-section" style="display:none;">
-                                <div class="course-terminal-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="window.app.toggleCourseTerminal()">
-                                    <span><i class="fas fa-terminal me-2"></i>Interactive Code Terminal</span>
-                                    <div class="d-flex gap-2" onclick="event.stopPropagation()">
-                                        <button class="btn btn-sm btn-success" onclick="window.app.runCourseCode()"><i class="fas fa-play me-1"></i> Run</button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.app.clearCourseTerminal()"><i class="fas fa-trash me-1"></i> Clear</button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.app.toggleCourseTerminal()"><i class="fas fa-chevron-down" id="terminal-chevron"></i></button>
-                                    </div>
-                                </div>
-                                <div id="course-terminal-body">
-                                    <textarea id="course-code-input" class="course-code-editor" placeholder="# Write your Python code here..." rows="8" spellcheck="false"></textarea>
-                                    <div class="course-terminal-output" id="course-terminal-output"><span style="color:var(--text-muted);">Output will appear here...</span></div>
-                                </div>
-                            </div>
-                            <div class="course-terminal-toggle-bar" id="course-terminal-toggle-bar">
-                                <button class="btn btn-sm btn-outline-secondary w-100" onclick="window.app.openCourseTerminal()">
-                                    <i class="fas fa-terminal me-2"></i> Open Interactive Code Terminal
-                                </button>
-                            </div>
-                            <div class="course-ai-assist-bar">
-                                <button class="btn btn-info w-100" id="course-ai-assist-btn" onclick="window.app.openCourseAIAssist()">
-                                    <i class="fas fa-robot me-2"></i> Ask AI Tutor about this topic
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="course-ai-panel" id="course-ai-panel" style="display:none;">
-                        <div class="course-ai-panel-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-robot me-2"></i>AI Tutor</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="window.app.closeCourseAIPanel()"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="course-ai-messages" id="course-ai-messages">
-                            <div class="text-center py-3" style="color:var(--text-muted);">
-                                <i class="fas fa-robot fa-2x mb-2"></i>
-                                <p class="small">Ask me anything about this topic!</p>
-                            </div>
-                        </div>
-                        <div class="course-ai-input-area">
-                            <textarea id="course-ai-input" class="form-control" rows="2" placeholder="Ask about this topic, paste your code for review..." style="background:var(--tertiary-bg);color:var(--text-primary);border-color:var(--border-color);"></textarea>
-                            <button class="btn btn-info mt-2 w-100" onclick="window.app.sendCourseAIMessage()">
-                                <i class="fas fa-paper-plane me-1"></i> Send
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Tasks Section -->
-                <section id="tasks" class="content-section">
-                    <div class="section-header">
-                        <h2>Task Center</h2>
-                        <p>Create and manage AI tasks</p>
-                    </div>
-                    <div class="tasks-container">
-                        <div class="task-creator">
-                            <h3>Create New Task</h3>
-                            <form id="task-form">
-                                <div class="form-group">
-                                    <label for="task-description">Task Description</label>
-                                    <textarea id="task-description" placeholder="Describe what you want the AI to do..." required></textarea>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="task-type">Task Type</label>
-                                        <select id="task-type">
-                                            <option value="general">General</option>
-                                            <option value="analysis">Analysis</option>
-                                            <option value="creative">Creative</option>
-                                            <option value="technical">Technical</option>
-                                            <option value="research">Research</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="preferred-agent">Preferred Agent</label>
-                                        <select id="preferred-agent">
-                                            <option value="">Auto-select</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <button type="submit" class="submit-btn">
-                                    <i class="fas fa-rocket"></i> Execute Task
-                                </button>
-                            </form>
-                        </div>
-                        <div class="task-results" id="task-results">
-                            <h3>Task Results</h3>
-                            <div class="results-placeholder">
-                                <i class="fas fa-clipboard-list"></i>
-                                <p>Task results will appear here</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Portfolio Section -->
-                <section id="portfolio" class="content-section">
-                    <div class="section-header">
-                        <h2>Freelancing Portfolio Builder</h2>
-                        <p>This tool will fetch your repositories to automatically generate a professional portfolio.</p>
-                    </div>
-                    <div class="placeholder-content">
-                        <i class="fas fa-tools fa-3x"></i>
-                        <p>Portfolio Builder coming soon.</p>
-                    </div>
-                </section>
-
-                <!-- Build Section -->
-                <section id="build" class="content-section">
-                    <div class="section-header">
-                        <h2>Build Your Product</h2>
-                        <p>An AI-assisted tool to help you design, plan, and build your own software products.</p>
-                    </div>
-                    <div class="placeholder-content">
-                        <i class="fas fa-rocket fa-3x"></i>
-                        <p>Product Builder coming soon.</p>
-                    </div>
-                </section>
             </div>
         </main>
     </div>
@@ -695,8 +509,9 @@
             const loginItem = document.getElementById('guest-login-item');
             const logoutItem = document.getElementById('logout-item');
 
-            if (user && user.picture && avatarEl) {
-                avatarEl.innerHTML = `<img src="${user.picture}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--primary-color);">`;
+            // Icon-only approach — no avatar image
+            if (avatarEl) {
+                avatarEl.innerHTML = `<i class="fas fa-user-circle fa-lg"></i>`;
             }
             if (nameEl && user && user.name) nameEl.textContent = user.name.split(' ')[0];
             if (emailEl && user && user.email) emailEl.textContent = user.email;
@@ -745,6 +560,17 @@
             // Force dark theme
             document.documentElement.setAttribute('data-theme', 'dark');
             checkAuthStatus();
+
+            // Close sidebar when clicking outside of it
+            document.addEventListener('click', function(e) {
+                var offcanvasEl = document.getElementById('sidebarOffcanvas');
+                var hamburgerBtn = document.getElementById('hamburger-btn');
+                var offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (!offcanvasInstance) return;
+                if (!offcanvasEl.contains(e.target) && hamburgerBtn && !hamburgerBtn.contains(e.target)) {
+                    offcanvasInstance.hide();
+                }
+            });
         });
     </script>
 </body>

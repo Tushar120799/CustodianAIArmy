@@ -5,8 +5,8 @@
 
 .chat-container {
     display: flex;
-    height: calc(100vh - 160px);
-    min-height: 600px;
+    height: calc(100vh - 220px);
+    min-height: 400px;
     background: var(--secondary-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -14,13 +14,20 @@
 }
 
 @media (max-width: 900px) {
-    /* On mobile: header=60px + page-nav~44px = 104px total fixed height above chat */
+    /* Mobile: body padding-top=90px, page-header-box~80px, sub-header~36px, content padding~16px */
     .chat-container {
-        height: calc(100vh - 110px);
+        height: calc(100vh - 240px);
         min-height: 0;
         border-radius: 0;
         border-left: none;
         border-right: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-container {
+        height: calc(100vh - 260px);
+        min-height: 0;
     }
 }
 
@@ -109,12 +116,13 @@
 .message.user { align-self: flex-end; }
 .message.agent { align-self: flex-start; }
 
-.message-header { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+.message-header { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.25rem; }
 
 .message-content {
-    padding: 0.875rem 1.25rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 8px;
     line-height: 1.6;
+    font-size: 0.75rem;
 }
 .user .message-content {
     background: var(--primary-color);

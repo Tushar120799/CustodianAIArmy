@@ -1304,39 +1304,33 @@ window.sendMessage = function() {
 
 // Authentication functions
 window.updateUserProfile = function(user) {
-    console.log('[updateUserProfile] Called with user:', user);
-    const profileIcon = document.getElementById('user-profile-img');
+    // Update the profile button name (icon-only approach, no avatar image)
     const profileName = document.getElementById('user-profile-name');
     const editNameInput = document.getElementById('profileNameInput');
     const editEmailInput = document.getElementById('profileEmailInput');
-    
-    console.log('[updateUserProfile] DOM elements:', { profileIcon, profileName, editNameInput, editEmailInput });
-    
-    if (profileIcon && user.picture) {
-        console.log('[updateUserProfile] Setting profile picture:', user.picture);
-        profileIcon.src = user.picture;
-    }
-    if (profileName && user.name) {
-        console.log('[updateUserProfile] Setting profile name:', user.name);
+    const guestLoginItem = document.getElementById('guest-login-item');
+
+    if (profileName && user && user.name) {
         profileName.textContent = user.name.split(' ')[0];
     }
-    
-    if (editNameInput) editNameInput.value = user.name || '';
-    if (editEmailInput) editEmailInput.value = user.email || '';
-    
-    localStorage.setItem('custodian_user', JSON.stringify(user));
-    console.log('[updateUserProfile] Saved user to localStorage');
-    
+
+    if (editNameInput) editNameInput.value = (user && user.name) || '';
+    if (editEmailInput) editEmailInput.value = (user && user.email) || '';
+
+    // Show/hide guest login item
+    if (guestLoginItem) {
+        guestLoginItem.style.display = user ? 'none' : '';
+    }
+
+    if (user) {
+        localStorage.setItem('custodian_user', JSON.stringify(user));
+    }
+
     // Hide auth modal if it's showing
     const authModalElement = document.getElementById('authModal');
     if (authModalElement) {
         const authModal = bootstrap.Modal.getInstance(authModalElement);
-        if (authModal) {
-            console.log('[updateUserProfile] Hiding auth modal');
-            authModal.hide();
-        } else {
-            console.log('[updateUserProfile] Auth modal not found or not initialized');
-        }
+        if (authModal) authModal.hide();
     }
 };
 
@@ -1496,8 +1490,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }, 1500);
         } else {
-            // Not authenticated - show login modal after a short delay
+            // Not authenticated - show guest login item in dropdown and show login modal
             console.log('[Auth] Not authenticated, showing login modal');
+            const guestLoginItem = document.getElementById('guest-login-item');
+            if (guestLoginItem) guestLoginItem.style.display = '';
             setTimeout(() => {
                 const authModal = new bootstrap.Modal(document.getElementById('authModal'));
                 authModal.show();
@@ -2022,36 +2018,58 @@ CustodianAIApp.prototype.selectModel = function(modelId, modelLabel) {
  * Switch the active chat agent to the first available agent for the given provider.
  * Called by the Gemini / Claude / NIM quick-switch buttons in the API Keys modal.
  */
-CustodianAIApp.prototype.switchToProvider = function(provider) {
-    // Map provider → agent name prefix / exact name
-    const prefixMap = {
-        gemini:    function(name) { return !name.startsWith('NIM-') && !name.startsWith('Claude-') && name !== 'ClaudeCode-AI'; },
-        anthropic: function(name) { return name.startsWith('Claude-') || name === 'ClaudeCode-AI'; },
-        nim:       function(name) { return name.startsWith('NIM-'); }
-    };
-    const matcher = prefixMap[provider];
-    if (!matcher) return;
+CustodianAIApp.prototype.switchToProvider = async function(provider) {
+    const validProviders = ['groq', 'gemini', 'anthropic', 'nim'];
+    if (!validProviders.includes(provider)) return;
 
-    // Find the first coordinator/main agent for that provider
-    const preferred = ['CustodianAI', 'Coordinator', 'coordinator'];
-    let target = this.agents.find(a => matcher(a.name) && preferred.some(p => a.name.includes(p)));
-    if (!target) target = this.agents.find(a => matcher(a.name));
-    if (!target) {
-        alert('No ' + provider + ' agents are currently available.');
-        return;
+    // Show a brief loading indicator on the button
+    const btnMap = { gemini: 'fab fa-google', anthropic: 'fas fa-brain', nim: 'fas fa-microchip' };
+    const providerLabels = { groq: 'Groq', gemini: 'Gemini', anthropic: 'Claude', nim: 'NIM' };
+
+    try {
+        // Call backend to switch provider server-side
+        const resp = await fetch('/api/v1/provider/switch', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+        });
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Failed to switch provider');
+        }
+
+        // Reload agents from backend (agent IDs change after provider switch)
+        const agentsResp = await fetch('/api/v1/agents', { credentials: 'include' });
+        const agentsData = await agentsResp.json();
+        this.agents = agentsData.agents;
+        this.updateDashboardAgentList(agentsData.agents);
+        this.updateModalAgentList(agentsData.agents);
+        this.updatePreferredAgentSelect(agentsData.agents);
+
+        // Close the API Keys modal
+        const apiKeysModalEl = document.getElementById('apiKeysModal');
+        if (apiKeysModalEl) {
+            const modal = bootstrap.Modal.getInstance(apiKeysModalEl);
+            if (modal) modal.hide();
+        }
+
+        // Select the first available agent (CustodianAI preferred)
+        const preferred = ['CustodianAI'];
+        let target = this.agents.find(a => preferred.includes(a.name));
+        if (!target) target = this.agents[0];
+
+        if (target) {
+            setTimeout(() => {
+                this.selectChatAgent(target);
+            }, 300);
+        }
+
+    } catch (err) {
+        console.error('Error switching provider:', err);
+        alert('Failed to switch to ' + (providerLabels[provider] || provider) + ': ' + err.message);
     }
-
-    // Close the API Keys modal first, then select the agent
-    const apiKeysModalEl = document.getElementById('apiKeysModal');
-    if (apiKeysModalEl) {
-        const modal = bootstrap.Modal.getInstance(apiKeysModalEl);
-        if (modal) modal.hide();
-    }
-
-    // Small delay to let modal close before updating UI
-    setTimeout(() => {
-        this.selectChatAgent(target);
-    }, 300);
 };
 
 /**

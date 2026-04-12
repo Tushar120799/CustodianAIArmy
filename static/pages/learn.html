@@ -82,16 +82,18 @@
 
         <!-- Course List View -->
         <div id="view-course-list">
-            <!-- Language Toggle + Header -->
-            <div class="learn-section-controls d-flex align-items-center justify-content-between mb-3">
+            <!-- Page Header Box -->
+            <div class="page-header-box mb-3">
                 <div class="section-header mb-0">
                     <h2><i class="fas fa-graduation-cap me-2"></i>Learn with AI</h2>
                     <p>Interactive courses with AI-powered tutoring</p>
                 </div>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-info active" id="learn-lang-en-btn" onclick="setLanguage('en')">EN</button>
-                    <button class="btn btn-sm btn-outline-secondary" id="learn-lang-de-btn" onclick="setLanguage('de')">DE</button>
-                </div>
+            </div>
+
+            <!-- Language Toggle (separate, outside the box) -->
+            <div class="d-flex gap-1 mb-3" id="learn-lang-toggle">
+                <button class="btn btn-sm btn-outline-info active" id="learn-lang-en-btn" onclick="setLanguage('en')">EN</button>
+                <button class="btn btn-sm btn-outline-secondary" id="learn-lang-de-btn" onclick="setLanguage('de')">DE</button>
             </div>
 
             <!-- Category Filter -->

@@ -226,6 +226,48 @@
     z-index: 1;
 }
 
+/* ── Page Header Box (consistent across all pages) ── */
+@keyframes pageHeaderReveal {
+    from { opacity: 0; clip-path: inset(0 100% 0 0); }
+    to   { opacity: 1; clip-path: inset(0 0% 0 0); }
+}
+
+.page-header-box {
+    background: linear-gradient(135deg, rgba(77,171,247,0.07) 0%, rgba(124,58,237,0.05) 100%);
+    border: 1px solid rgba(77,171,247,0.25);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.page-header-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--primary-color), var(--accent));
+    border-radius: 10px 0 0 10px;
+}
+.page-header-box .section-header h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+    white-space: normal;
+    word-break: break-word;
+    animation: pageHeaderReveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-header-box .section-header h2 i {
+    animation: none;
+    display: inline-block;
+}
+.page-header-box .section-header p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin: 0;
+    animation: pageHeaderReveal 0.8s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .section-header { margin-bottom: 1.5rem; }
 .section-header h2 {
     font-size: 1.5rem;

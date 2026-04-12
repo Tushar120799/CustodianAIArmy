@@ -7,6 +7,7 @@
     <meta name="description" content="Deploy an army of AI agents to learn, build, and create. Free to try, no signup required.">
     <link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -556,9 +557,40 @@
             Custodian AI
         </a>
     </div>
-    <a href="/api/v1/auth/google" class="nav-signin">
-        <i class="fab fa-google"></i> Sign In
-    </a>
+    <!-- User Profile Dropdown (homepage) -->
+    <div class="dropdown" id="home-profile-dropdown">
+        <!-- Guest state: Sign In button -->
+        <a href="/api/v1/auth/google" class="nav-signin" id="home-signin-btn">
+            <i class="fab fa-google"></i> Sign In
+        </a>
+        <!-- Authenticated state: Profile dropdown (hidden until auth check) -->
+        <button class="btn p-0 dropdown-toggle d-none" type="button" id="homeUserDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                style="background:none;border:1px solid var(--primary);border-radius:4px;padding:0.4rem 0.75rem !important;display:flex;align-items:center;gap:0.4rem;color:var(--primary);font-weight:600;font-size:0.875rem;">
+            <i class="fas fa-user-circle me-1"></i>
+            <span id="home-user-name">User</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark"
+            aria-labelledby="homeUserDropdown"
+            style="background:#0f0f1a;border:1px solid rgba(77,171,247,0.5);min-width:200px;">
+            <li>
+                <div class="px-3 py-2 border-bottom" style="border-color:rgba(77,171,247,0.2)!important;">
+                    <div style="font-size:0.85rem;color:#4dabf7;font-weight:600;" id="home-dropdown-name">User</div>
+                    <div style="font-size:0.75rem;color:#9090b0;" id="home-dropdown-email"></div>
+                </div>
+            </li>
+            <li><a class="dropdown-item" href="/?section=dashboard" style="color:#4dabf7;font-size:0.875rem;"><i class="fas fa-brain me-2"></i>AI Dashboard</a></li>
+            <li><a class="dropdown-item" href="/?section=dashboard" style="color:#4dabf7;font-size:0.875rem;" onclick="sessionStorage.setItem('openModal','apiKeys')"><i class="fas fa-key me-2"></i>API Keys</a></li>
+            <li><a class="dropdown-item" href="/payment.html" style="color:#f59e0b;font-size:0.875rem;"><i class="fas fa-crown me-2"></i>My Plan</a></li>
+            <li><hr class="dropdown-divider" style="border-color:rgba(77,171,247,0.2);"></li>
+            <li id="home-guest-login" style="display:none;">
+                <a class="dropdown-item" href="/api/v1/auth/google" style="color:#10b981;font-size:0.875rem;"><i class="fab fa-google me-2"></i>Login with Google</a>
+            </li>
+            <li id="home-logout-item" style="display:none;">
+                <a class="dropdown-item" href="#" style="color:#f87171;font-size:0.875rem;" onclick="homeLogout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+            </li>
+        </ul>
+    </div>
 </nav>
 
 <!-- Hero -->
@@ -811,6 +843,79 @@
             offcanvasInstance.hide();
         }
     });
+
+    // Logout function for homepage
+    async function homeLogout() {
+        try {
+            await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch(e) {}
+        localStorage.removeItem('custodian_user');
+        window.location.reload();
+    }
+
+    // Check auth status and update UI if user is already signed in
+    (async function() {
+        try {
+            const resp = await fetch('/api/v1/auth/status', { credentials: 'include' });
+            const data = await resp.json();
+            if (data.authenticated && data.user) {
+                const user = data.user;
+                const firstName = (user.name || 'User').split(' ')[0];
+
+                // Hide the Sign In button, show the profile dropdown button
+                const signinBtn = document.getElementById('home-signin-btn');
+                const dropdownBtn = document.getElementById('homeUserDropdown');
+                if (signinBtn) signinBtn.style.display = 'none';
+                if (dropdownBtn) {
+                    dropdownBtn.classList.remove('d-none');
+                    dropdownBtn.style.display = 'flex';
+                }
+
+                // Populate dropdown with user info
+                const nameEl = document.getElementById('home-user-name');
+                const dropdownName = document.getElementById('home-dropdown-name');
+                const dropdownEmail = document.getElementById('home-dropdown-email');
+                if (nameEl) nameEl.textContent = firstName;
+                if (dropdownName) dropdownName.textContent = user.name || firstName;
+                if (dropdownEmail) dropdownEmail.textContent = user.email || '';
+
+                // Show logout, hide guest login
+                const logoutItem = document.getElementById('home-logout-item');
+                const guestLogin = document.getElementById('home-guest-login');
+                if (logoutItem) logoutItem.style.display = '';
+                if (guestLogin) guestLogin.style.display = 'none';
+
+                // Hide "Sign In with Google" hero CTA button
+                const heroSigninBtn = document.querySelector('.hero-ctas .btn-hero-secondary');
+                if (heroSigninBtn && heroSigninBtn.href && heroSigninBtn.href.includes('auth/google')) {
+                    heroSigninBtn.style.display = 'none';
+                }
+
+                // Update offcanvas sidebar: replace "Sign In with Google" with "Go to Dashboard"
+                const offcanvasSignin = document.querySelector('.offcanvas-signin');
+                if (offcanvasSignin) {
+                    offcanvasSignin.href = '/?section=dashboard';
+                    offcanvasSignin.innerHTML = `<i class="fas fa-rocket me-2"></i>Go to Dashboard`;
+                    offcanvasSignin.style.background = 'var(--primary)';
+                }
+
+                // Hide "Sign In with Google" in CTA banner section
+                document.querySelectorAll('a[href="/api/v1/auth/google"]').forEach(function(el) {
+                    if (el.classList.contains('btn-hero-secondary') || el.classList.contains('pricing-btn-outline')) {
+                        el.style.display = 'none';
+                    }
+                });
+            } else {
+                // Guest: show guest login in dropdown, hide logout
+                const guestLogin = document.getElementById('home-guest-login');
+                const logoutItem = document.getElementById('home-logout-item');
+                if (guestLogin) guestLogin.style.display = '';
+                if (logoutItem) logoutItem.style.display = 'none';
+            }
+        } catch(e) {
+            // Silently ignore — user is not logged in
+        }
+    })();
 </script>
 </body>
 </html>

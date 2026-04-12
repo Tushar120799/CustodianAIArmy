@@ -324,6 +324,17 @@ class GroqAgent(BaseAgent):
         if mcp_executor:
             tool_definitions = mcp_executor.get_tool_definitions_openai()
 
+        # Determine if this message is simple/conversational (skip tools for those)
+        _simple_msg = user_message.strip()
+        _is_simple = (
+            len(_simple_msg) < 20 and
+            not any(kw in _simple_msg.lower() for kw in [
+                "search", "find", "look up", "fetch", "get", "what is", "who is",
+                "news", "latest", "current", "today", "weather", "price", "stock",
+                "read", "write", "file", "code", "calculate", "analyze", "research"
+            ])
+        )
+
         # Agentic tool-calling loop
         for iteration in range(MAX_TOOL_ITERATIONS):
             payload = {
@@ -335,8 +346,8 @@ class GroqAgent(BaseAgent):
                 "stream": False
             }
 
-            # Add tools to payload if available
-            if tool_definitions:
+            # Add tools to payload only for non-trivial messages
+            if tool_definitions and not _is_simple:
                 payload["tools"] = tool_definitions
                 payload["tool_choice"] = "auto"
 
