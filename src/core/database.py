@@ -73,6 +73,16 @@ def init_db():
             )
         ''')
 
+        # User plans and rate limiting table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_plans (
+                user_email TEXT PRIMARY KEY,
+                plan TEXT NOT NULL DEFAULT 'guest',
+                requests_today INTEGER NOT NULL DEFAULT 0,
+                last_reset_date TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")
@@ -286,6 +296,109 @@ def delete_user_api_key(user_email: str, provider: str) -> bool:
         return True
     except Exception as e:
         print(f"Error deleting API key: {e}")
+        return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLAN / RATE LIMITING FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+PLAN_LIMITS = {
+    "guest": {"daily_limit": 3,  "providers": ["nim"]},
+    "free":  {"daily_limit": 20, "providers": ["gemini", "anthropic", "nim"]},
+    "pro":   {"daily_limit": 50, "providers": ["gemini", "anthropic", "nim"]},
+}
+
+
+def get_user_plan(user_email: str) -> Dict[str, Any]:
+    """Get plan info for a user. Creates a guest record if none exists."""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT plan, requests_today, last_reset_date FROM user_plans WHERE user_email = ?",
+        (user_email,)
+    )
+    row = cursor.fetchone()
+
+    if not row:
+        # New user — insert as guest
+        cursor.execute(
+            "INSERT INTO user_plans (user_email, plan, requests_today, last_reset_date) VALUES (?, 'guest', 0, ?)",
+            (user_email, today)
+        )
+        conn.commit()
+        plan, requests_today, last_reset_date = "guest", 0, today
+    else:
+        plan, requests_today, last_reset_date = row[0], row[1], row[2]
+        # Reset counter if it's a new day
+        if last_reset_date != today:
+            cursor.execute(
+                "UPDATE user_plans SET requests_today = 0, last_reset_date = ? WHERE user_email = ?",
+                (today, user_email)
+            )
+            conn.commit()
+            requests_today = 0
+
+    conn.close()
+
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["guest"])
+    return {
+        "plan": plan,
+        "requests_today": requests_today,
+        "daily_limit": limits["daily_limit"],
+        "remaining": max(0, limits["daily_limit"] - requests_today),
+        "allowed_providers": limits["providers"],
+    }
+
+
+def check_and_increment_rate_limit(user_email: str) -> Dict[str, Any]:
+    """
+    Check if the user is within their daily limit and increment the counter.
+    Returns dict with: allowed (bool), plan, requests_today, daily_limit, remaining.
+    """
+    info = get_user_plan(user_email)
+    if info["requests_today"] >= info["daily_limit"]:
+        info["allowed"] = False
+        return info
+
+    # Increment
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE user_plans SET requests_today = requests_today + 1, last_reset_date = ? WHERE user_email = ?",
+        (today, user_email)
+    )
+    conn.commit()
+    conn.close()
+
+    info["requests_today"] += 1
+    info["remaining"] = max(0, info["daily_limit"] - info["requests_today"])
+    info["allowed"] = True
+    return info
+
+
+def upgrade_user_plan(user_email: str, new_plan: str) -> bool:
+    """Upgrade or change a user's plan."""
+    if new_plan not in PLAN_LIMITS:
+        return False
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO user_plans (user_email, plan, requests_today, last_reset_date)
+               VALUES (?, ?, 0, ?)
+               ON CONFLICT(user_email) DO UPDATE SET plan = excluded.plan""",
+            (user_email, new_plan, today)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error upgrading plan: {e}")
         return False
 
 

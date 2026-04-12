@@ -468,31 +468,73 @@ class CustodianAIApp {
 
         this.showLoading(true);
 
+        // Determine endpoint: try authenticated first, fall back to guest if 401
+        // This handles the case where localStorage is empty but session cookie is valid
+        const isGuest = !localStorage.getItem('custodian_user');
+        const primaryEndpoint = '/api/v1/chat';
+        const guestEndpoint = '/api/v1/chat/guest';
+
+        const requestBody = JSON.stringify({
+            message: message,
+            agent_name: this.currentAgent.name,
+            agent_id: this.currentAgent.agent_id
+        });
+
+        let response, data, usedGuestEndpoint = false;
+
         try {
-            const response = await fetch('/api/v1/chat', {
+            // Always try authenticated endpoint first
+            response = await fetch(primaryEndpoint, {
                 method: 'POST',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: message,
-                    agent_name: this.currentAgent.name
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: requestBody
             });
 
-            const data = await response.json();
-            
+            // If 401 (not authenticated), fall back to guest endpoint
+            if (response.status === 401) {
+                usedGuestEndpoint = true;
+                response = await fetch(guestEndpoint, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: requestBody
+                });
+            }
+
+            data = await response.json();
+
             if (response.ok) {
-                this.addMessageToChat('agent', data.agent_response.agent_name, data.agent_response.content);
-                this.currentMessages.push({ sender: data.agent_response.agent_name, content: data.agent_response.content });
-                this.saveChatToDb();
+                const agentResp = data.agent_response;
+                // Check if rate limited (backend returns 200 with rate_limited flag)
+                if (agentResp && agentResp.metadata && agentResp.metadata.rate_limited) {
+                    this.addMessageToChat('agent', agentResp.agent_name || 'System', agentResp.content);
+                    this.currentMessages.push({ sender: agentResp.agent_name || 'System', content: agentResp.content });
+                    // Show rate limit popup
+                    this._showRateLimitModal(data.plan_info);
+                } else {
+                    this.addMessageToChat('agent', agentResp.agent_name || this.currentAgent.name, agentResp.content);
+                    this.currentMessages.push({ sender: agentResp.agent_name || this.currentAgent.name, content: agentResp.content });
+                    this.saveChatToDb();
+                }
+                // Silently refresh plan info in background so My Plan modal shows updated count
+                fetch('/api/v1/user/plan', { credentials: 'include' })
+                    .then(r => r.json())
+                    .then(planData => {
+                        // Update the plan body if the modal is currently open
+                        const planBody = document.getElementById('my-plan-body');
+                        if (planBody && planBody.querySelector('.progress-bar')) {
+                            // Modal is open — reload it
+                            if (typeof loadMyPlan === 'function') loadMyPlan();
+                        }
+                    })
+                    .catch(() => {});
             } else {
                 throw new Error(data.detail || 'Failed to send message');
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            this.addMessageToChat('agent', 'System', 'Sorry, I encountered an error processing your message.');
+            this.addMessageToChat('agent', 'System', 'Sorry, I encountered an error processing your message. Please try again.');
         } finally {
             this.showLoading(false);
         }
@@ -505,17 +547,38 @@ class CustodianAIApp {
             return;
         }
 
+        // Try to get user from localStorage first, then fall back to auth status check
+        let userEmail = null;
         const userStr = localStorage.getItem('custodian_user');
-        if (!userStr) {
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                userEmail = user.email;
+            } catch(e) {}
+        }
+
+        // If no localStorage user, check if we have a valid session cookie
+        if (!userEmail) {
+            try {
+                const authResp = await fetch('/api/v1/auth/status', { credentials: 'include' });
+                const authData = await authResp.json();
+                if (authData.authenticated && authData.user) {
+                    userEmail = authData.user.email;
+                    // Cache it in localStorage for future calls
+                    localStorage.setItem('custodian_user', JSON.stringify(authData.user));
+                }
+            } catch(e) {}
+        }
+
+        if (!userEmail) {
             console.log('User not authenticated - not saving chat to DB');
             return;
         }
-        const user = JSON.parse(userStr);
-        
-        const title = this.currentMessages.length > 1 
-            ? this.currentMessages[1].content.substring(0, 30) + '...' 
+
+        const title = this.currentMessages.length > 1
+            ? this.currentMessages[1].content.substring(0, 30) + '...'
             : 'New Chat with ' + (this.currentAgent ? this.currentAgent.name : 'Agent');
-            
+
         try {
             await fetch('/api/v1/auth/user/chats', {
                 method: 'POST',
@@ -523,7 +586,7 @@ class CustodianAIApp {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: this.currentChatId,
-                    user_email: user.email,
+                    user_email: userEmail,
                     title: title,
                     messages: this.currentMessages
                 })
@@ -1397,8 +1460,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(cachedUser);
             console.log('[Auth] Found cached user, calling updateUserProfile:', user);
             updateUserProfile(user);
-            // User has cached profile - skip backend check and don't show auth modal
-            console.log('[Auth] Using cached user from localStorage, skipping backend auth check');
+            // User has cached profile - load chat history in background
+            console.log('[Auth] Using cached user from localStorage, loading chat history...');
+            // Load chat history silently in background after a short delay
+            setTimeout(() => {
+                if (typeof window.loadChatHistory === 'function') {
+                    window.loadChatHistory().catch(e => console.log('[Auth] Background chat history load failed:', e));
+                }
+            }, 1500);
             return;
         } catch (e) {
             // Invalid cached data, clear it
@@ -1420,6 +1489,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('[Auth] Backend says authenticated, updating profile with:', data.user);
             updateUserProfile(data.user);
             console.log('[Auth] updateUserProfile called successfully');
+            // Load chat history in background after authentication
+            setTimeout(() => {
+                if (typeof window.loadChatHistory === 'function') {
+                    window.loadChatHistory().catch(e => console.log('[Auth] Background chat history load failed:', e));
+                }
+            }, 1500);
         } else {
             // Not authenticated - show login modal after a short delay
             console.log('[Auth] Not authenticated, showing login modal');
@@ -1661,6 +1736,92 @@ function _capitalize(str) {
 }
 
 // =============================================================================
+// MY PLAN MODAL
+// =============================================================================
+
+window.loadMyPlan = async function() {
+    const body = document.getElementById('my-plan-body');
+    if (!body) return;
+    body.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Loading...</p></div>';
+    try {
+        const resp = await fetch('/api/v1/user/plan', { credentials: 'include' });
+        const data = await resp.json();
+        const plan = data.plan || 'guest';
+        const isGuest = plan === 'guest';
+        const isFree = plan === 'free';
+        const isPro = plan === 'pro';
+        const pct = Math.min(100, Math.round((data.requests_today / data.daily_limit) * 100));
+        const barColor = pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-warning' : 'bg-info';
+
+        const planBadgeClass = isGuest ? 'bg-secondary' : isFree ? 'bg-info text-dark' : 'bg-warning text-dark';
+        const planIcon = isGuest ? 'user-secret' : isFree ? 'user' : 'crown';
+        const planLabel = isGuest ? 'Guest' : isFree ? 'Free' : 'Pro';
+
+        body.innerHTML = `
+            <div class="text-center mb-4">
+                <span class="badge ${planBadgeClass} fs-6 px-3 py-2">
+                    <i class="fas fa-${planIcon} me-2"></i>${planLabel}
+                </span>
+            </div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted">Daily requests used</span>
+                    <span class="fw-bold">${data.requests_today} / ${data.daily_limit}</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar ${barColor}" role="progressbar" style="width:${pct}%"></div>
+                </div>
+                <div class="small text-muted mt-1">${data.remaining} request${data.remaining !== 1 ? 's' : ''} remaining today</div>
+            </div>
+            <div class="mb-4">
+                <h6 class="text-info mb-2"><i class="fas fa-plug me-2"></i>Provider Access</h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    ${['gemini','anthropic','nim'].map(p => {
+                        const allowed = data.allowed_providers && data.allowed_providers.includes(p);
+                        const labels = {gemini:'Google Gemini', anthropic:'Anthropic Claude', nim:'NVIDIA NIM'};
+                        return `<span class="badge ${allowed ? 'bg-success' : 'bg-secondary'}">${allowed ? '✓' : '✗'} ${labels[p]}</span>`;
+                    }).join('')}
+                </div>
+            </div>
+            ${isGuest ? `
+            <div class="border border-warning rounded p-3 mt-3">
+                <h6 class="text-warning mb-2"><i class="fas fa-star me-2"></i>Sign In for More</h6>
+                <ul class="text-muted small mb-3">
+                    <li>20 requests/day on Free plan</li>
+                    <li>50 requests/day on Pro plan</li>
+                    <li>Access to Gemini, Claude &amp; NIM</li>
+                    <li>Chat history &amp; course progress saved</li>
+                </ul>
+                <a href="/api/v1/auth/google" class="btn btn-success w-100">
+                    <i class="fab fa-google me-2"></i>Sign in with Google — It's Free
+                </a>
+            </div>` : isFree ? `
+            <div class="border border-info rounded p-3 mt-3">
+                <h6 class="text-info mb-2"><i class="fas fa-crown me-2"></i>Upgrade to Pro</h6>
+                <ul class="text-muted small mb-3">
+                    <li>50 requests/day (vs 20 on Free)</li>
+                    <li>Priority access to all providers</li>
+                </ul>
+                <button class="btn btn-warning text-dark w-100 fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('myPlanModal'))?.hide(); setTimeout(() => window.app && window.app.openPaymentPage(), 300);">
+                    <i class="fas fa-crown me-2"></i>Upgrade to Pro — $9.99/mo
+                </button>
+            </div>` : `
+            <div class="text-center text-muted small mt-3">
+                <i class="fas fa-check-circle text-success me-1"></i>You have full Pro access to all providers and features.
+            </div>`}
+        `;
+
+        // Show/hide guest login item in dropdown
+        const guestItem = document.getElementById('guest-login-item');
+        if (guestItem) guestItem.style.display = isGuest ? 'block' : 'none';
+
+    } catch(e) {
+        console.error('Failed to load plan:', e);
+        if (body) body.innerHTML = '<p class="text-danger text-center">Failed to load plan info. Please try again.</p>';
+    }
+};
+
+// =============================================================================
 // PROVIDER DETECTION HELPERS
 // =============================================================================
 
@@ -1748,6 +1909,47 @@ const _providerModels = {
  */
 CustodianAIApp.prototype.openModelSelector = function() {
     if (!this.currentAgent) return;
+
+    // ── Guest restriction: NIM only, no model switching ──────────────────────
+    const isGuestUser = !localStorage.getItem('custodian_user');
+    if (isGuestUser) {
+        // Show a brief tooltip-style notice but keep existing messages intact
+        const existing = document.getElementById('model-selector-popup');
+        if (existing) { existing.remove(); return; }
+        const popup = document.createElement('div');
+        popup.id = 'model-selector-popup';
+        popup.className = 'model-selector-popup';
+        popup.innerHTML = `
+            <div class="model-selector-header">
+                <span class="text-warning small fw-bold"><i class="fas fa-lock me-1"></i>Guest Mode</span>
+                <button class="btn btn-sm btn-icon-only text-secondary" onclick="document.getElementById('model-selector-popup').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-3 text-muted small">
+                Guests use <strong class="text-success">NVIDIA NIM</strong> by default.<br>
+                <a href="/api/v1/auth/google" class="text-info">Sign in with Google</a> to switch models.
+            </div>
+        `;
+        const anchor = document.getElementById('active-model-display');
+        if (anchor) {
+            const rect = anchor.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = (rect.bottom + 6) + 'px';
+            popup.style.left = rect.left + 'px';
+        }
+        document.body.appendChild(popup);
+        setTimeout(() => {
+            document.addEventListener('click', function closePopup(e) {
+                if (!popup.contains(e.target) && e.target !== anchor) {
+                    popup.remove();
+                    document.removeEventListener('click', closePopup);
+                }
+            });
+        }, 100);
+        return;
+    }
+
     const provider = _getAgentProvider(this.currentAgent);
     const models = _providerModels[provider] || [];
     const currentModel = this.currentModelOverride || null;
@@ -1847,6 +2049,60 @@ CustodianAIApp.prototype.switchToProvider = function(provider) {
     setTimeout(() => {
         this.selectChatAgent(target);
     }, 300);
+};
+
+/**
+ * Open the payment page in a popup window and watch for it to close,
+ * then refresh the plan info.
+ */
+CustodianAIApp.prototype.openPaymentPage = function() {
+    const popup = window.open(
+        '/payment.html',
+        'custodian_payment',
+        'width=520,height=760,scrollbars=yes,resizable=no,toolbar=no,menubar=no,location=no,status=no'
+    );
+
+    if (!popup) {
+        alert('Please allow popups for this site to open the payment page.');
+        return;
+    }
+
+    // Poll until popup closes, then refresh plan info
+    const pollTimer = setInterval(() => {
+        if (popup.closed) {
+            clearInterval(pollTimer);
+            // Refresh plan info in My Plan modal if it's open
+            loadMyPlan();
+            // Also show a brief toast/notification
+            const toastEl = document.createElement('div');
+            toastEl.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(26,26,46,0.97);border:1px solid rgba(0,229,255,0.4);border-radius:10px;padding:14px 20px;color:#e8e8e8;font-size:0.9rem;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+            toastEl.innerHTML = '<i class="fas fa-sync-alt me-2 text-info"></i>Checking your plan status...';
+            document.body.appendChild(toastEl);
+            setTimeout(() => toastEl.remove(), 3000);
+        }
+    }, 500);
+};
+
+/**
+ * Show rate limit exceeded modal/popup for logged-in free users.
+ */
+CustodianAIApp.prototype._showRateLimitModal = function(planInfo) {
+    const modalEl = document.getElementById('rateLimitModal');
+    if (modalEl) {
+        // Update modal content with plan info
+        const remaining = planInfo ? planInfo.remaining : 0;
+        const daily = planInfo ? planInfo.daily_limit : 0;
+        const plan = planInfo ? planInfo.plan : 'free';
+        const infoEl = document.getElementById('rate-limit-plan-info');
+        if (infoEl) {
+            infoEl.innerHTML = `You are on the <strong>${plan}</strong> plan (${daily} requests/day). Your limit resets at midnight UTC.`;
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    } else {
+        // Fallback: show a simple alert
+        alert('⚠️ Daily request limit reached.\n\nSwitching to a different model as you have run out of free requests for this model today.\n\nYour limit resets at midnight UTC.');
+    }
 };
 
 /**

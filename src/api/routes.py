@@ -2,7 +2,7 @@
 API Routes for Custodian AI Army
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse
 import subprocess
 import json
@@ -16,7 +16,8 @@ from datetime import datetime
 from src.agents.agent_manager import AgentManager
 from src.core.database import (
     get_chats_for_user, save_chat_session, DB_PATH,
-    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key
+    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key,
+    get_user_plan, check_and_increment_rate_limit, upgrade_user_plan
 )
 from src.agents.base_agent import AgentMessage
 from src.core.logging_config import get_logger
@@ -40,6 +41,7 @@ class ChatRequest(BaseModel):
     message: str
     agent_name: Optional[str] = None
     agent_id: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = []
 
 class ChatSessionSaveRequest(BaseModel):
     id: Optional[str] = None
@@ -289,6 +291,85 @@ async def get_main_agents():
         "timestamp": datetime.utcnow().isoformat()
     }
 
+@router.post("/chat/guest")
+async def guest_chat(request: ChatRequest):
+    """Guest chat — NIM only, 3 requests/day, no auth required"""
+    guest_email = "guest@custodian.ai"
+    rate = check_and_increment_rate_limit(guest_email)
+    if not rate["allowed"]:
+        return {
+            "agent_response": {
+                "content": (
+                    "🔒 **You've used all 3 free daily requests as a guest.**\n\n"
+                    "**Sign in with Google** to unlock:\n"
+                    "- ✅ 20 requests per day\n"
+                    "- ✅ Access to Gemini, Claude, and NIM providers\n"
+                    "- ✅ Chat history saved\n\n"
+                    "[Sign in with Google →](/api/v1/auth/google)"
+                ),
+                "agent_name": "System",
+                "agent_id": "system",
+                "timestamp": datetime.utcnow().isoformat(),
+                "metadata": {"rate_limited": True}
+            },
+            "plan_info": rate
+        }
+    # Force NIM for guests
+    if agent_manager.active_provider != "nim":
+        agent_manager.switch_provider("nim")
+    agent_name = request.agent_name or "CustodianAI"
+    target = agent_manager.get_agent_by_name(agent_name)
+    if not target and request.agent_id:
+        target = agent_manager.get_agent(request.agent_id)
+    if not target:
+        target = next(iter(agent_manager.main_agents.values()), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="No agent available")
+    msg = AgentMessage(
+        sender_id="guest",
+        receiver_id=target.agent_id,
+        content=request.message,
+        message_type="chat"
+    )
+    response = await agent_manager.send_message(msg)
+    return {
+        "agent_response": {
+            "content": response.content,
+            "agent_name": target.name,
+            "agent_id": target.agent_id,
+            "specialization": getattr(target, "specialization", None),
+            "timestamp": response.timestamp.isoformat(),
+            "metadata": response.metadata
+        },
+        "plan_info": rate
+    }
+
+
+@router.get("/user/plan")
+async def get_user_plan_endpoint(request: Request):
+    """Get plan info — guest-friendly (no auth required)"""
+    from src.api.auth import get_user_from_session, decode_jwt_token
+    email = "guest@custodian.ai"
+    try:
+        # Try session cookie
+        session_id = request.cookies.get("session_id")
+        if session_id:
+            user = get_user_from_session(session_id)
+            if user:
+                email = user.email
+        # Try JWT access_token cookie
+        if email == "guest@custodian.ai":
+            access_token = request.cookies.get("access_token")
+            if access_token:
+                payload = decode_jwt_token(access_token)
+                if payload and payload.get("email"):
+                    email = payload["email"]
+    except Exception:
+        pass
+    plan_info = get_user_plan(email)
+    return plan_info
+
+
 @router.post("/chat")
 async def chat_with_agent(
     request: ChatRequest,
@@ -298,6 +379,25 @@ async def chat_with_agent(
     try:
         # Log security event - user is authenticated
         logger.info(f"Authenticated chat request from user: {current_user.email} (ID: {current_user.id})")
+
+        # ── Rate limiting for free/pro users ──────────────────────────────────
+        rate = check_and_increment_rate_limit(current_user.email)
+        if not rate["allowed"]:
+            return {
+                "agent_response": {
+                    "content": (
+                        "⚠️ **Daily request limit reached.**\n\n"
+                        "You have used all your free requests for today. "
+                        "Your limit resets at midnight UTC.\n\n"
+                        "Upgrade to **Pro** for 50 requests/day and priority access."
+                    ),
+                    "agent_name": "System",
+                    "agent_id": "system",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "metadata": {"rate_limited": True}
+                },
+                "plan_info": rate
+            }
 
         # Find the target agent
         target_agent = None
@@ -313,12 +413,16 @@ async def chat_with_agent(
         if not target_agent:
             raise HTTPException(status_code=404, detail="Agent not found")
         
+        # Build conversation history (cap at last 20 messages to avoid token limits)
+        history = request.history[-20:] if request.history else []
+
         # Create and send message
         chat_message = AgentMessage(
             sender_id="user",
             receiver_id=target_agent.agent_id,
             content=request.message,
-            message_type="chat"
+            message_type="chat",
+            metadata={"history": history}
         )
         
         response = await agent_manager.send_message(chat_message)
@@ -767,6 +871,9 @@ class UserApiKeysRequest(BaseModel):
     anthropic_api_key: Optional[str] = None
     nim_api_key: Optional[str] = None
 
+class SwitchProviderRequest(BaseModel):
+    provider: str  # 'gemini' | 'anthropic' | 'nim'
+
 
 @router.get("/user/api-keys")
 async def get_my_api_keys(
@@ -806,6 +913,78 @@ async def save_my_api_keys(
         raise
     except Exception as e:
         logger.error(f"Error saving API keys: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/provider/switch")
+async def switch_provider(
+    request: SwitchProviderRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Switch the active AI provider for all agents globally."""
+    valid_providers = ["gemini", "anthropic", "nim"]
+    if request.provider not in valid_providers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid provider. Must be one of: {', '.join(valid_providers)}"
+        )
+    try:
+        # Load user's API keys to inject into the new agents
+        user_keys = get_user_api_keys_raw(current_user.email)
+        success = agent_manager.switch_provider(request.provider, user_keys)
+        if success:
+            return {
+                "status": "success",
+                "active_provider": agent_manager.active_provider,
+                "message": f"All agents switched to {request.provider}"
+            }
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown provider: {request.provider}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error switching provider: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/provider/active")
+async def get_active_provider():
+    """Get the currently active AI provider."""
+    return {
+        "active_provider": agent_manager.active_provider,
+        "available_providers": ["gemini", "anthropic", "nim"]
+    }
+
+
+class UpgradePlanRequest(BaseModel):
+    plan: str  # 'pro' | 'free'
+
+
+@router.post("/user/upgrade-plan")
+async def upgrade_plan(
+    request: UpgradePlanRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Upgrade the current user's plan (called after payment confirmation)."""
+    valid_plans = ["free", "pro"]
+    if request.plan not in valid_plans:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
+    try:
+        success = upgrade_user_plan(current_user.email, request.plan)
+        if success:
+            plan_info = get_user_plan(current_user.email)
+            return {
+                "status": "success",
+                "message": f"Plan upgraded to {request.plan}",
+                "plan": request.plan,
+                "plan_info": plan_info
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to upgrade plan")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error upgrading plan: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

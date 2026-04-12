@@ -112,7 +112,8 @@ class GeminiAgent(BaseAgent):
 			response = await self._call_gemini_api(
 				system_prompt=system_prompt,
 				user_message=message.content,
-				context=message.metadata.get("context", {})
+				context=message.metadata.get("context", {}),
+				history=message.metadata.get("history", [])
 			)
 			# Ensure code blocks, JSON, and similar are always wrapped in triple backticks
 			formatted_response = self._format_code_blocks(response)
@@ -251,17 +252,27 @@ class GeminiAgent(BaseAgent):
 				"agent_id": self.agent_id,
 				"agent_name": self.name
 			}
+
 	def _get_system_prompt(self) -> str:
 		"""Get system prompt based on agent specialization.
 		Loads from a .md file in src/agents/prompts/ if available,
 		otherwise falls back to the hardcoded default."""
 		# Map specialization names to prompt filenames
+		# Includes both main agents and sub-agents with dedicated prompt files
 		prompt_file_map = {
 			"general": "general.md",
 			"analyst": "analyst.md",
+			"data_analyst": "data_analyst.md",
+			"market_analyst": "market_analyst.md",
 			"creative": "creative.md",
+			"writer": "writer.md",
+			"designer": "designer.md",
 			"technical": "technical.md",
+			"coder": "coder.md",
+			"architect": "architect.md",
 			"researcher": "researcher.md",
+			"fact_checker": "fact_checker.md",
+			"trend_analyst": "trend_analyst.md",
 			"tutor": "tutor.md",
 			"coordinator": "coordinator.md",
 		}
@@ -323,20 +334,40 @@ class GeminiAgent(BaseAgent):
 		self,
 		system_prompt: str,
 		user_message: str,
-		context: Dict[str, Any] = None
+		context: Dict[str, Any] = None,
+		history: list = None
 	) -> str:
 		"""Call the Google Gemini API"""
 		if not settings.GEMINI_API_KEY:
 			self.logger.error("GEMINI_API_KEY not configured.")
 			raise ValueError("GEMINI_API_KEY must be set to use the agent.")
 
-		full_prompt = f"{system_prompt}\n\nUser Request: {user_message}"
+		# Build multi-turn conversation from history
+		# Gemini uses "contents" array with role: "user" / "model"
+		contents = []
+		if history:
+			for msg in history:
+				sender = msg.get("sender", "")
+				content = msg.get("content", "")
+				if not content:
+					continue
+				role = "user" if sender == "You" else "model"
+				contents.append({"role": role, "parts": [{"text": content}]})
+		# Append the current user message (with system prompt prepended on first turn)
+		if contents:
+			# System prompt already established; just send the user message
+			contents.append({"role": "user", "parts": [{"text": user_message}]})
+		else:
+			# No history — prepend system prompt to the first user message
+			full_prompt = f"{system_prompt}\n\nUser Request: {user_message}"
+			contents.append({"role": "user", "parts": [{"text": full_prompt}]})
+
 		payload = {
-			"contents": [{"parts": [{"text": full_prompt}]}],
+			"contents": contents,
 			"generationConfig": {
 				"temperature": 0.7,
 				"topP": 1.0,
-				"maxOutputTokens": 1024,
+				"maxOutputTokens": 8192,
 			}
 		}
 		model = settings.GEMINI_MODEL or "gemini-2.5-flash"

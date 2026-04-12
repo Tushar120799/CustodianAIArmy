@@ -444,7 +444,8 @@ body {
 /* Chat Interface */
 .chat-container {
     display: flex;
-    height: 750px;
+    height: calc(100vh - 160px);
+    min-height: 600px;
     background: var(--secondary-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -457,7 +458,7 @@ body {
 
 .agents-top-section {
     display: flex;
-    height: 375px;
+    height: 200px;
     border-bottom: 1px solid var(--border-color);
 }
 

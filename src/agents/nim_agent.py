@@ -116,7 +116,8 @@ class NIMAgent(BaseAgent):
             response = await self._call_nim_api(
                 system_prompt=system_prompt,
                 user_message=message.content,
-                context=message.metadata.get("context", {})
+                context=message.metadata.get("context", {}),
+                history=message.metadata.get("history", [])
             )
             formatted_response = self._format_code_blocks(response)
             response_message = AgentMessage(
@@ -188,6 +189,7 @@ class NIMAgent(BaseAgent):
         prompt_file_map = {
             "general": "general.md",
             "analyst": "analyst.md",
+            "data_analyst": "data_analyst.md",
             "creative": "creative.md",
             "technical": "technical.md",
             "researcher": "researcher.md",
@@ -237,7 +239,8 @@ class NIMAgent(BaseAgent):
         self,
         system_prompt: str,
         user_message: str,
-        context: Dict[str, Any] = None
+        context: Dict[str, Any] = None,
+        history: list = None
     ) -> str:
         """Call the NVIDIA NIM API (OpenAI-compatible format)"""
         api_key = self._get_api_key()
@@ -247,10 +250,19 @@ class NIMAgent(BaseAgent):
             )
 
         model = self._get_model()
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
+
+        # Build multi-turn conversation from history
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            for msg in history:
+                sender = msg.get("sender", "")
+                content = msg.get("content", "")
+                if not content:
+                    continue
+                role = "user" if sender == "You" else "assistant"
+                messages.append({"role": role, "content": content})
+        # Always append the current user message last
+        messages.append({"role": "user", "content": user_message})
 
         payload = {
             "model": model,

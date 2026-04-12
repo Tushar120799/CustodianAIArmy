@@ -53,6 +53,11 @@ async def read_root():
     from fastapi.responses import FileResponse
     return FileResponse("static/index.html")
 
+@app.get("/payment.html")
+async def payment_page():
+    from fastapi.responses import FileResponse
+    return FileResponse("static/payment.html")
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",

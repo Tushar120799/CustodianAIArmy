@@ -86,7 +86,12 @@
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i> Edit Details</a></li>
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#chatHistoryModal"><i class="fas fa-history me-2"></i> Chat History</a></li>
                             <li><a class="dropdown-item text-info" href="#" data-bs-toggle="modal" data-bs-target="#apiKeysModal" onclick="loadApiKeys(); if(window.app && window.app.currentAgent) window.app._updateApiKeysAgentDisplay(window.app.currentAgent);"><i class="fas fa-key me-2"></i> API Keys</a></li>
+                            <li><a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#myPlanModal" onclick="loadMyPlan(); return true;"><i class="fas fa-crown me-2"></i> My Plan</a></li>
                             <li><hr class="dropdown-divider border-info"></li>
+                            <!-- Login with Google (shown for guest users) -->
+                            <li id="guest-login-item" style="display:none;">
+                                <a class="dropdown-item text-success" href="/api/v1/auth/google"><i class="fab fa-google me-2"></i> Login with Google</a>
+                            </li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>
                     </div>
@@ -135,24 +140,23 @@
                         <p>Select an agent from the list to start a conversation.</p>
                     </div>
                     <div class="chat-container chat-container-desktop">
-                        <!-- Top Section for Agents and Info -->
+                        <!-- Top Section for Agents and Info (compact) -->
                         <div class="agents-top-section d-flex">
                             <!-- Agent List -->
-                            <div class="chat-sidebar" style="width: 50%;">
-                                <h3>Available Agents</h3>
+                            <div class="chat-sidebar" style="width: 50%; overflow-y: auto;">
+                                <h3 style="font-size: 0.85rem; margin-bottom: 0.5rem;">Available Agents</h3>
                                 <div class="agent-list" id="dashboard-agent-list">
                                     <!-- Agent list will be populated here -->
                                 </div>
                             </div>
                             <!-- Agent Info -->
-                            <div class="agent-info-panel" id="agent-info-panel" style="display: none; width: 50%;">
-                                <h3 style="margin-bottom: 1rem; color: var(--accent-cyan); font-family: 'Orbitron', monospace;">Agent Details</h3>
+                            <div class="agent-info-panel" id="agent-info-panel" style="display: none; width: 50%; overflow-y: auto; padding: 0.75rem;">
+                                <h3 style="margin-bottom: 0.5rem; color: var(--accent-cyan); font-family: 'Orbitron', monospace; font-size: 0.85rem;">Agent Details</h3>
                                 <div class="agent-info-content">
-                                    <img id="info-agent-icon" src="" alt="" class="info-agent-icon" style="display: none; width: 60px; height: 60px; margin-bottom: 10px;">
-                                    <h4 id="info-agent-name" class="text-info mt-2">Agent Name</h4>
-                                    <div class="agent-specialization text-muted mb-3" id="info-agent-spec">Specialization</div>
-                                    <p id="info-agent-desc" class="agent-description">Description</p>
-                                    <div id="info-agent-usage" class="agent-usage mt-3"></div>
+                                    <h4 id="info-agent-name" class="text-info mt-1 mb-0" style="font-size: 0.95rem;">Agent Name</h4>
+                                    <div class="agent-specialization text-muted mb-1" id="info-agent-spec" style="font-size: 0.75rem;">Specialization</div>
+                                    <p id="info-agent-desc" class="agent-description" style="font-size: 0.8rem; margin-bottom: 0.5rem;">Description</p>
+                                    <div id="info-agent-usage" class="agent-usage"></div>
                                 </div>
                             </div>
                         </div>
@@ -561,10 +565,69 @@ print(f'Hello, {name}!')
 <!-- Floating Agent Status Panel -->
 
 
+    <!-- Rate Limit Exceeded Modal -->
+    <div class="modal fade" id="rateLimitModal" tabindex="-1" aria-labelledby="rateLimitModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-warning">
+                    <h5 class="modal-title text-warning" id="rateLimitModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Daily Limit Reached
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-warning fw-bold mb-2">Switching to a different model as you have run out of free requests for this model today.</p>
+                    <p id="rate-limit-plan-info" class="text-muted small mb-3"></p>
+                    <div class="border border-info rounded p-3">
+                        <h6 class="text-info mb-2"><i class="fas fa-crown me-2"></i>Upgrade for More Requests</h6>
+                        <ul class="text-muted small mb-3">
+                            <li><strong>Free plan:</strong> 20 requests/day</li>
+                            <li><strong>Pro plan:</strong> 50 requests/day</li>
+                            <li>Access to all providers: Gemini, Claude &amp; NIM</li>
+                        </ul>
+                        <button class="btn btn-warning text-dark w-100 fw-bold mb-2" onclick="bootstrap.Modal.getInstance(document.getElementById('rateLimitModal'))?.hide(); setTimeout(() => window.app && window.app.openPaymentPage(), 300);">
+                            <i class="fas fa-crown me-2"></i>Upgrade to Pro — $9.99/mo
+                        </button>
+                        <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#myPlanModal" onclick="loadMyPlan()" class="btn btn-outline-info w-100">
+                            <i class="fas fa-crown me-2"></i>View My Plan
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer border-warning">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Plan Modal — always reload plan data when shown -->
+    <div class="modal fade" id="myPlanModal" tabindex="-1" aria-labelledby="myPlanModalLabel" aria-hidden="true"
+         data-bs-backdrop="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-warning">
+                    <h5 class="modal-title text-warning" id="myPlanModalLabel">
+                        <i class="fas fa-crown me-2"></i>My Plan
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="my-plan-body">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading plan info...</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-warning">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <script src="/static/js/app.js?v=10"></script>
+    <script src="/static/js/app.js?v=11"></script>
     
     <!-- API Keys Modal -->
     <div class="modal fade" id="apiKeysModal" tabindex="-1" aria-labelledby="apiKeysModalLabel" aria-hidden="true">
@@ -780,67 +843,22 @@ print(f'Hello, {name}!')
             }
         }
 
-        // Chat History Fetch
-        async function loadChatHistory() {
-            const userStr = localStorage.getItem('custodian_user');
-            if (!userStr) return;
-            const user = JSON.parse(userStr);
-            
-            try {
-                const response = await fetch(`/api/v1/chats?email=${encodeURIComponent(user.email)}`);
-                const data = await response.json();
-                
-                const list = document.getElementById('chat-history-list');
-                const currentItem = document.getElementById('current-chat-item');
-                list.innerHTML = '';
-                
-                if (data.chats && data.chats.length > 0) {
-                    let currentChatHtml = '<p class="text-muted">No messages in current session yet.</p>';
-                    let hasPastChats = false;
-                    
-                    data.chats.forEach(chat => {
-                        const date = new Date(chat.last_updated).toLocaleString();
-                        const messageCount = chat.messages ? chat.messages.length : 0;
-                        
-                        const chatHtml = `
-                            <div class="chat-history-card p-3 border border-secondary rounded" style="background: rgba(26, 26, 46, 0.6); cursor: pointer;" onclick="alert('Viewing chat history is coming soon!')">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong class="text-info">${chat.title || 'Chat Session'}</strong>
-                                    <small class="text-muted">${date}</small>
-                                </div>
-                                <div class="text-secondary small">${messageCount} messages</div>
-                            </div>
-                        `;
-                        
-                        // Check if this is the current active chat session
-                        if (window.app && window.app.currentChatId === chat.id) {
-                            currentChatHtml = `
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong class="text-info">${chat.title || 'Current Chat'}</strong>
-                                    <span class="badge bg-info text-dark">Active</span>
-                                </div>
-                                <div class="text-secondary small">${messageCount} messages</div>
-                            `;
-                        } else {
-                            hasPastChats = true;
-                            list.innerHTML += chatHtml;
-                        }
-                    });
-                    
-                    currentItem.innerHTML = currentChatHtml;
-                    if (!hasPastChats) {
-                        list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
-                    }
-                } else {
-                    currentItem.innerHTML = '<p class="text-muted">No messages in current session yet.</p>';
-                    list.innerHTML = '<p class="text-center text-muted my-4">No past chat history found.</p>';
-                }
-            } catch (err) {
-                console.error("Failed to load chat history", err);
+        // Chat History - delegate to app.js window.loadChatHistory which uses authenticated endpoint
+        document.getElementById('chatHistoryModal').addEventListener('show.bs.modal', function() {
+            if (typeof window.loadChatHistory === 'function') {
+                window.loadChatHistory();
             }
-        }
+        });
 
-        document.getElementById('chatHistoryModal').addEventListener('show.bs.modal', loadChatHistory);
+        // Always reload plan data fresh when My Plan modal is opened
+        document.addEventListener('DOMContentLoaded', function() {
+            const myPlanModalEl = document.getElementById('myPlanModal');
+            if (myPlanModalEl) {
+                myPlanModalEl.addEventListener('show.bs.modal', function() {
+                    loadMyPlan();
+                });
+            }
+        });
 
         // Dark Mode Toggle
         document.addEventListener('DOMContentLoaded', function() {

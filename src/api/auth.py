@@ -373,6 +373,15 @@ async def google_callback(request: Request, code: str = None, error: str = None)
             
             # Create session
             session_id = create_user_session(user)
+
+            # Auto-assign 'free' plan for Google-authenticated users (if not already set)
+            try:
+                from ..core.database import upgrade_user_plan, get_user_plan
+                existing_plan = get_user_plan(user.email)
+                if existing_plan.get("plan") == "guest":
+                    upgrade_user_plan(user.email, "free")
+            except Exception as _plan_err:
+                print(f"Warning: could not set free plan for {user.email}: {_plan_err}")
             
             # Generate JWT token (now with 1-year expiry)
             jwt_token = generate_jwt_token(user)
