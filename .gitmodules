@@ -7,3 +7,12 @@
 [submodule "dependencies/claudecode"]
 	path = dependencies/claudecode
 	url = https://github.com/Tushar120799/claudecode.git
+[submodule "Reinforced_MVP_Developer"]
+	path = Reinforced_MVP_Developer
+	url = https://github.com/Tushar1224/Reinforced_MVP_Developer.git
+[submodule "dependencies/Reinforced_MVP_Developer"]
+	path = dependencies/Reinforced_MVP_Developer
+	url = https://github.com/Tushar1224/Reinforced_MVP_Developer.git
+[submodule "dependencies/python-sdk"]
+	path = dependencies/python-sdk
+	url = https://github.com/Tushar120799/python-sdk.git

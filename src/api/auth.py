@@ -7,13 +7,14 @@ import secrets
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Request, HTTPException, Depends, Cookie
+from fastapi import APIRouter, Request, HTTPException, Depends, Cookie, Response
 from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
 import httpx
 import jwt
 
 from ..core.config import settings
+import json
 from ..core.database import init_db, get_db
 import sqlite3
 
@@ -312,7 +313,109 @@ async def google_login():
     
     return RedirectResponse(url=auth_url)
 
-@router.get("/google/callback")
+@router.get("/github/login")
+async def github_login(session_id: Optional[str] = None):
+    """
+    Initiate GitHub OAuth flow.
+    Redirects user to GitHub's OAuth consent screen.
+    """
+    import base64
+    state = secrets.token_urlsafe(16)
+    if session_id:
+        state = f"{session_id}:{state}"
+
+    github_auth_url = "https://github.com/login/oauth/authorize"
+    params = {
+        "client_id": settings.GITHUB_CLIENT_ID,
+        "redirect_uri": settings.GITHUB_REDIRECT_URI,
+        "scope": "repo user:email",  # Request access to repos and user email
+        "state": state,
+    }
+    from urllib.parse import urlencode
+    auth_url = f"{github_auth_url}?{urlencode(params)}"
+    return RedirectResponse(url=auth_url)
+
+
+@router.get("/github/callback")
+async def github_callback(request: Request, code: str = None, state: str = None, error: str = None):
+    """
+    Handle GitHub OAuth callback. This is designed to be used in a popup window.
+    It exchanges the code for a token and sends it to the parent window.
+    """
+    if error:
+        return Response(
+            content=f"<script>window.close();</script><h3>Error</h3><p>{error}</p>",
+            media_type="text/html"
+        )
+
+    if not code:
+        raise HTTPException(status_code=400, detail="No authorization code provided")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Exchange authorization code for an access token
+            token_response = await client.post(
+                "https://github.com/login/oauth/access_token",
+                json={
+                    "client_id": settings.GITHUB_CLIENT_ID,
+                    "client_secret": settings.GITHUB_CLIENT_SECRET,
+                    "code": code,
+                    "redirect_uri": settings.GITHUB_REDIRECT_URI,
+                },
+                headers={"Accept": "application/json"}
+            )
+            token_response.raise_for_status()
+            token_data = token_response.json()
+            access_token = token_data.get("access_token")
+
+            if not access_token:
+                raise HTTPException(status_code=400, detail="Could not retrieve access token from GitHub.")
+
+            # Get user info from GitHub
+            user_info_response = await client.get(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github.v3+json"
+                }
+            )
+            user_info_response.raise_for_status()
+            user_info = user_info_response.json()
+
+            session_id_from_state = None
+            if state and ":" in state:
+                session_id_from_state = state.split(":")[0]
+
+            # Prepare data to send to parent window
+            data_to_send = {
+                "provider": "github",
+                "token": access_token,
+                "username": user_info.get("login"),
+                "name": user_info.get("name"),
+                "avatar_url": user_info.get("avatar_url"),
+                "session_id": session_id_from_state,
+            }
+
+            # Create an HTML response with JavaScript to post a message to the parent window and close itself
+            html_content = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <body>
+                <script>
+                    window.opener.postMessage({json.dumps(data_to_send)}, '*');
+                    window.close();
+                </script>
+                <p>Authenticating... you can close this window.</p>
+            </body>
+            </html>
+            """
+            return Response(content=html_content, media_type="text/html")
+
+    except Exception as e:
+        error_html = f"<h3>Authentication Failed</h3><p>{str(e)}</p><script>window.close();</script>"
+        return Response(content=error_html, media_type="text/html")
+
+@router.get("/google/callback", include_in_schema=False)
 async def google_callback(request: Request, code: str = None, error: str = None):
     """
     Handle Google OAuth callback.

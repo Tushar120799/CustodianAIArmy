@@ -9,7 +9,7 @@ import json
 import os
 import sqlite3
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
@@ -22,6 +22,7 @@ from src.core.database import (
 from src.agents.base_agent import AgentMessage
 from src.core.logging_config import get_logger
 from src.api.auth import get_current_user_from_cookies, User
+from src.api.build import get_mvp_builder, MVPBuilder
 
 # Initialize router and logger
 router = APIRouter()
@@ -30,6 +31,77 @@ logger = get_logger("api")
 # Global agent manager instance
 agent_manager = AgentManager()
 
+
+# Global MVP Builder instance (initialized on first use)
+_mvp_builder: Optional[MVPBuilder] = None
+
+
+def get_mvp_builder_instance() -> MVPBuilder:
+    """Get or create the MVP Builder instance."""
+    global _mvp_builder
+    if _mvp_builder is None:
+        _mvp_builder = get_mvp_builder(agent_manager)
+    return _mvp_builder
+
+
+async def get_owned_mvp_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+) -> "MVPSession":
+    """
+    Dependency to get an MVP session and verify ownership.
+    """
+    mvp_builder = get_mvp_builder_instance()
+    session = mvp_builder.get_session(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Verify ownership
+    if session.user_email != current_user.email:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    return session
+
+
+# Pydantic models for MVP Builder API
+class MVPCreateSessionRequest(BaseModel):
+    product_idea: str
+
+
+class MVPSessionResponse(BaseModel):
+    session_id: str
+    product_idea: str
+    current_phase: str
+    overall_progress: int
+    mode: str
+    github_connected: bool
+
+
+class MVPMessageRequest(BaseModel):
+    session_id: str
+    message: str
+    agent_name: Optional[str] = None
+    mode: str = "plan"
+
+
+class MVPAdvancePhaseRequest(BaseModel):
+    session_id: str
+
+class MVPPublishRequest(BaseModel):
+    session_id: str
+    repo_name: str
+
+class MVPConnectGitHubRequest(BaseModel):
+    session_id: str
+    github_token: str
+    repo_name: Optional[str] = None
+
+class MVPDisconnectGitHubRequest(BaseModel):
+    session_id: str
+
+class MVPSelectGitHubRepoRequest(BaseModel):
+    session_id: str
 # Pydantic models for API requests/responses
 class TaskRequest(BaseModel):
     description: str
@@ -1036,3 +1108,245 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("API shutdown - Cleaning up Agent Manager")
     await agent_manager.shutdown()
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MVP Builder API Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/mvp/create-session")
+async def mvp_create_session(
+    request: MVPCreateSessionRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Create a new MVP building session."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        session = await mvp_builder.create_session(current_user.email, request.product_idea)
+
+        return {
+            "success": True,
+            "session": session.to_dict()
+        }
+    except Exception as e:
+        logger.error(f"Error creating MVP session: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mvp/sessions")
+async def mvp_get_all_sessions(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Get all MVP sessions for the current user."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        user_sessions = [
+            s.to_dict() for s in mvp_builder.sessions.values()
+            if s.user_email == current_user.email
+        ]
+        return {
+            "success": True,
+            "sessions": user_sessions,
+            "count": len(user_sessions)
+        }
+    except Exception as e:
+        logger.error(f"Error getting user MVP sessions: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mvp/session/{mvp_session_id}")
+async def mvp_get_session(
+    mvp_session_id: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Get an existing MVP session."""
+    try:
+        session = await get_owned_mvp_session(mvp_session_id, current_user)
+        return {"success": True, "session": session.to_dict()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting MVP session: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/mvp/send-message")
+async def mvp_send_message(
+    request: MVPMessageRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Send a message to the MVP builder."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        session = await get_owned_mvp_session(request.session_id, current_user)
+        result = await mvp_builder.send_message(request.session_id, request.message, request.mode, request.agent_name)
+        return {
+            "success": True,
+            "result": result,
+            "session": session.to_dict()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending MVP message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/mvp/advance-phase")
+async def mvp_advance_phase(
+    request: MVPAdvancePhaseRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Advance to the next MVP phase."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        result = await mvp_builder.advance_phase(request.session_id)
+        session = await get_owned_mvp_session(request.session_id, current_user)
+        return {
+            "success": result.get("success", False),
+            "result": result,
+            "session": session.to_dict()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error advancing MVP phase: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mvp/session/{mvp_session_id}/files")
+async def mvp_list_files(
+    mvp_session_id: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """List all files in the MVP workspace."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        session = await get_owned_mvp_session(mvp_session_id, current_user)
+        file_tree = mvp_builder.get_workspace_files_tree(mvp_session_id)
+
+        return {
+            "success": True,
+            "files": file_tree,
+            "file_count": len(session.files)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing MVP files: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mvp/session/{mvp_session_id}/file")
+async def mvp_read_file(
+    mvp_session_id: str,
+    path: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Read a specific file from the MVP workspace."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        await get_owned_mvp_session(mvp_session_id, current_user)
+        content = await mvp_builder.read_file(mvp_session_id, path)
+
+        if content is None:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return {
+            "success": True,
+            "path": path,
+            "content": content
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reading MVP file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/mvp/connect-github")
+async def mvp_connect_github(
+    request: MVPConnectGitHubRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Connect GitHub account for publishing."""
+    try:
+        if not request.github_token:
+            raise HTTPException(status_code=400, detail="GitHub token is required to connect.")
+        mvp_builder = get_mvp_builder_instance()
+        await get_owned_mvp_session(request.session_id, current_user)
+        result = await mvp_builder.connect_github(request.session_id, request.github_token, request.repo_name)
+        return {
+            "success": result.get("success", False),
+            "message": result.get("message", "GitHub connected"),
+            "github_username": result.get("github_username")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error connecting GitHub: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/mvp/disconnect-github")
+async def mvp_disconnect_github(
+    request: MVPDisconnectGitHubRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Disconnect GitHub account for a session."""
+    try:
+        session = await get_owned_mvp_session(request.session_id, current_user)
+        session.github_connected = False
+        session.github_token = None
+        session.github_username = None
+        session.github_repo_name = None
+        session.add_log("GitHub account disconnected.")
+        return {
+            "success": True,
+            "message": "GitHub account disconnected successfully."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error disconnecting GitHub: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mvp/session/{mvp_session_id}/github-repos")
+async def mvp_get_github_repos(
+    mvp_session_id: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Get a list of repositories for the connected GitHub account."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        await get_owned_mvp_session(mvp_session_id, current_user)
+        repos = await mvp_builder.get_github_repos(mvp_session_id)
+        return {"success": True, "repos": repos}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting GitHub repos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/mvp/publish")
+async def mvp_publish_to_github(
+    request: MVPPublishRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Publish the MVP to GitHub."""
+    try:
+        mvp_builder = get_mvp_builder_instance()
+        result = await mvp_builder.publish_to_github(request.session_id, request.repo_name)
+        await get_owned_mvp_session(request.session_id, current_user)
+        return {
+            "success": result.get("success", False),
+            "repo_url": result.get("repo_url"),
+            "message": result.get("message")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error publishing to GitHub: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
