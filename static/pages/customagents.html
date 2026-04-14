@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Agents — Custodian AI</title>
+    <link rel="icon" href="https://i.imgur.com/fC3C6gI.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <link rel="stylesheet" href="/static/css/customagent.css">
+    <style>
+        body { padding-top: 96px; }
+        @media (max-width: 768px) { body { padding-top: 90px; } }
+    </style>
+    <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+    <script>window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments)}</script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+</head>
+<body>
+
+    <!-- ── Offcanvas Sidebar ── -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel"
+         data-bs-scroll="true" data-bs-backdrop="false">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <nav class="nav flex-column nav-menu">
+                <a class="nav-link nav-item" href="/"><i class="fas fa-home me-2"></i>Home</a>
+                <a class="nav-link nav-item" href="/dashboard"><i class="fas fa-brain me-2"></i>AI Dashboard</a>
+                <a class="nav-link nav-item" href="/learn"><i class="fas fa-graduation-cap me-2"></i>Learn with AI</a>
+                <a class="nav-link nav-item" href="/portfolio"><i class="fab fa-github me-2"></i>Build Your Portfolio</a>
+                <a class="nav-link nav-item" href="/build"><i class="fas fa-cubes me-2"></i>Build Your Product</a>
+                <a class="nav-link nav-item active" href="/agents"><i class="fas fa-users-cog me-2"></i>Custom Agents</a>
+                <hr class="border-secondary my-2" style="border-color:var(--border-color)!important;">
+                <a class="nav-link nav-item" href="/#pricing"><i class="fas fa-tag me-2"></i>Pricing</a>
+                <a class="nav-link nav-item" href="/#coming-soon"><i class="fas fa-road me-2"></i>Roadmap</a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- ── Fixed Header / Nav Bar ── -->
+    <header class="header fixed-top">
+        <div class="header-content">
+            <!-- Left: Hamburger + Logo -->
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn-icon-only" id="hamburger-btn" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas"
+                    aria-controls="sidebarOffcanvas" aria-label="Open menu">
+                    <i class="fas fa-bars fa-lg"></i>
+                </button>
+                <a href="/" class="nav-logo">
+                    <i class="fas fa-robot float"></i>
+                    <span>Custodian AI</span>
+                </a>
+            </div>
+
+            <!-- Right: Profile Dropdown -->
+            <div class="dropdown">
+                <button class="btn-icon-only dropdown-toggle" type="button"
+                    id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="color:var(--primary-color);">
+                    <span id="user-avatar"><i class="fas fa-user-circle fa-lg"></i></span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdown">
+                    <li><span class="dropdown-item-text" id="user-display-name">Guest</span></li>
+                    <li><span class="dropdown-item-text" id="user-display-email" style="font-size:0.75rem;"></span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><span class="dropdown-item-text" style="font-size:0.75rem;">Plan: <strong id="plan-badge" style="color:var(--primary-color);">FREE</strong></span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-user-edit me-2"></i>Edit Details</a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#chatHistoryModal"><i class="fas fa-history me-2"></i>Chat History</a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#apiKeysModal" onclick="loadApiKeys(); if(window.app && window.app.currentAgent) window.app._updateApiKeysAgentDisplay(window.app.currentAgent);"><i class="fas fa-key me-2"></i>API Keys</a></li>
+                    <li><a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#myPlanModal" onclick="loadMyPlan(); return true;"><i class="fas fa-crown me-2"></i>My Plan</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li id="guest-login-item" style="display:none;">
+                        <a class="dropdown-item" href="/api/v1/auth/google" style="color:var(--success-color);"><i class="fab fa-google me-2"></i>Sign In with Google</a>
+                    </li>
+                    <li id="logout-item" style="display:none;">
+                        <button class="dropdown-item text-danger" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── Sub-Header: Stats ── -->
+    <div class="sub-header">
+        <div class="sub-header-stat">
+            <span class="stat-label">My Custom Agents</span>
+            <span class="stat-value" id="my-agents-count">0</span>
+        </div>
+        <div class="sub-header-divider"></div>
+        <div class="sub-header-stat">
+            <span class="stat-label">Published Agents</span>
+            <span class="stat-value" id="published-agents-count">0</span>
+        </div>
+        <div class="sub-header-divider"></div>
+        <div class="sub-header-stat">
+            <span class="stat-label">Skills Library</span>
+            <span class="stat-value" id="skills-count">0</span>
+        </div>
+    </div>
+
+    <!-- ── Main App Container ── -->
+    <div class="app-container" id="main-app-container">
+        <main class="main-content">
+            <div class="content-area">
+
+                <!-- Custom Agents Section -->
+                <section id="custom-agents" class="content-section active">
+                    <div class="page-header-box mb-3">
+                        <div class="section-header mb-0">
+                            <h2><i class="fas fa-users-cog me-2"></i>Custom Agents Studio</h2>
+                            <p>Create, customize, and publish your own AI agents with unique skills and MCP tools.</p>
+                        </div>
+                    </div>
+
+                    <div class="agents-studio-layout d-flex gap-3">
+                        <!-- LHS: Agent Creation Dashboard -->
+                        <div class="agents-creation-panel" style="flex: 1; min-width: 0;">
+                            <!-- Creation Mode Toggle -->
+                            <div class="creation-mode-toggle mb-3">
+                                <button class="mode-btn active" data-mode="single" onclick="window.agentsApp.setCreationMode('single')">
+                                    <i class="fas fa-user"></i> Single Agent
+                                </button>
+                                <button class="mode-btn" data-mode="army" onclick="window.agentsApp.setCreationMode('army')">
+                                    <i class="fas fa-users"></i> Agent Army
+                                </button>
+                            </div>
+
+                            <!-- Agent Configuration Form -->
+                            <div class="agent-config-card mb-3">
+                                <div class="card-header-custom">
+                                    <i class="fas fa-sliders-h me-2"></i>Agent Configuration
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="mb-3">
+                                        <label class="form-label small">Agent Name</label>
+                                        <input type="text" class="form-control form-control-sm" id="agent-name-input" placeholder="e.g., Code Reviewer Pro">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small">Specialization</label>
+                                        <input type="text" class="form-control form-control-sm" id="agent-spec-input" placeholder="e.g., Code Analysis & Review">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small">Description</label>
+                                        <textarea class="form-control form-control-sm" id="agent-desc-input" rows="3" placeholder="Describe what this agent does..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Prompt Generator -->
+                            <div class="prompt-generator-card mb-3">
+                                <div class="card-header-custom">
+                                    <i class="fas fa-magic me-2"></i>AI Prompt Builder
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="mb-2">
+                                        <label class="form-label small">Base Idea</label>
+                                        <textarea class="form-control form-control-sm" id="prompt-idea-input" rows="2" placeholder="Describe what you want your agent to do..."></textarea>
+                                    </div>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <button class="btn btn-sm btn-outline-info" onclick="window.agentsApp.generatePrompt()">
+                                            <i class="fas fa-sparkles me-1"></i> Generate
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.agentsApp.refinePrompt()">
+                                            <i class="fas fa-wand-magic-sparkles me-1"></i> Refine
+                                        </button>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Generated Prompt</label>
+                                        <textarea class="form-control form-control-sm" id="generated-prompt-output" rows="4" placeholder="AI-generated prompt will appear here..."></textarea>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include-skills-in-prompt" checked>
+                                        <label class="form-check-label small" for="include-skills-in-prompt">
+                                            Include selected skills in prompt
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Skills Selection -->
+                            <div class="skills-selection-card mb-3">
+                                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star me-2"></i>Agent Skills</span>
+                                    <button class="btn btn-sm btn-outline-info" onclick="window.agentsApp.openAddSkillModal()">
+                                        <i class="fas fa-plus me-1"></i> Add Skill
+                                    </button>
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="skills-tags-container" id="skills-tags-container">
+                                        <span class="text-muted small">No skills added yet. Click "Add Skill" to create one.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- MCP Tools Selection -->
+                            <div class="mcp-tools-card mb-3">
+                                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-plug me-2"></i>MCP Tools</span>
+                                    <button class="btn btn-sm btn-outline-info" onclick="window.agentsApp.openAddMCPModal()">
+                                        <i class="fas fa-plus me-1"></i> Add MCP
+                                    </button>
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="mcp-tools-list" id="mcp-tools-list">
+                                        <span class="text-muted small">No MCP tools attached yet.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Publishing Options -->
+                            <div class="publishing-options-card mb-3">
+                                <div class="card-header-custom">
+                                    <i class="fas fa-globe me-2"></i>Publishing Options
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="publish-option" id="publish-private" value="private" checked>
+                                        <label class="form-check-label" for="publish-private">
+                                            <i class="fas fa-lock me-1"></i> Private (Only Me)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="publish-option" id="publish-public" value="public">
+                                        <label class="form-check-label" for="publish-public">
+                                            <i class="fas fa-globe me-1"></i> Public (Shareable URL)
+                                        </label>
+                                    </div>
+                                    <div class="alert alert-info py-2 px-3 small" id="public-url-info" style="display:none;">
+                                        <i class="fas fa-link me-1"></i> Share URL: <code id="share-url-display" class="ms-1"></code>
+                                    </div>
+                                    <button class="btn btn-primary w-100" onclick="window.agentsApp.saveAgent()">
+                                        <i class="fas fa-save me-2"></i>Save Agent
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RHS: Created Agents Display -->
+                        <div class="agents-display-panel" style="flex: 1; min-width: 0;">
+                            <div class="agents-display-card">
+                                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-robots me-2"></i>My Custom Agents</span>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="window.agentsApp.filterAgents('all')">
+                                            All
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="window.agentsApp.filterAgents('private')">
+                                            Private
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="window.agentsApp.filterAgents('public')">
+                                            Published
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body-custom">
+                                    <div class="custom-agents-grid" id="custom-agents-grid">
+                                        <!-- Custom agent cards will be rendered here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chat with Selected Custom Agent -->
+                            <div class="custom-agent-chat-card mt-3" id="custom-agent-chat-card" style="display:none;">
+                                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-comments me-2"></i>Chat with <span id="chat-agent-name"></span></span>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="window.agentsApp.closeChat()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body-custom p-0">
+                                    <div class="chat-messages" id="custom-chat-messages" style="height: 300px; overflow-y: auto; padding: 1rem;">
+                                        <div class="welcome-message">
+                                            <i class="fas fa-robot"></i>
+                                            <p>Start chatting with your custom agent!</p>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input-container">
+                                        <textarea id="custom-chat-input" placeholder="Type your message..." rows="1"></textarea>
+                                        <button id="custom-send-btn" onclick="window.agentsApp.sendCustomMessage()">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p style="color:var(--text-secondary);">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Add/Edit Skill Modal -->
+    <div class="modal fade" id="skillModal" tabindex="-1" aria-labelledby="skillModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="skillModalLabel"><i class="fas fa-star me-2"></i>Add Skill</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Skill Name</label>
+                        <input type="text" class="form-control" id="skill-name-input" placeholder="e.g., Python Expert">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Skill Description</label>
+                        <textarea class="form-control" id="skill-desc-input" rows="3" placeholder="Describe what this skill enables..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Skill Category</label>
+                        <select class="form-select" id="skill-category-input">
+                            <option value="technical">Technical</option>
+                            <option value="creative">Creative</option>
+                            <option value="analytical">Analytical</option>
+                            <option value="communication">Communication</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="window.agentsApp.addSkill()">Add Skill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add MCP Tool Modal -->
+    <div class="modal fade" id="mcpModal" tabindex="-1" aria-labelledby="mcpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mcpModalLabel"><i class="fas fa-plug me-2"></i>Add MCP Tool</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tool Name</label>
+                        <input type="text" class="form-control" id="mcp-name-input" placeholder="e.g., File System Access">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tool Endpoint/URL</label>
+                        <input type="text" class="form-control" id="mcp-endpoint-input" placeholder="e.g., https://api.example.com/mcp">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Configuration (JSON)</label>
+                        <textarea class="form-control" id="mcp-config-input" rows="4" placeholder='{"key": "value"}'></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="window.agentsApp.addMCPTool()">Add MCP</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Army Chat Modal -->
+    <div class="modal fade" id="armyChatModal" tabindex="-1" aria-labelledby="armyChatModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="armyChatModalLabel"><i class="fas fa-users me-2"></i>Agent Army Builder</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="small text-muted">Discuss with AI to create multiple agents at once. Describe your army concept and let AI help you design the perfect team.</p>
+                    </div>
+                    <div class="army-chat-messages" id="army-chat-messages" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
+                        <div class="message agent">
+                            <div class="message-header">AI Assistant</div>
+                            <div class="message-content">Hello! I'm here to help you build your agent army. Tell me about the types of agents you'd like to create and what tasks they should handle.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <textarea class="form-control" id="army-chat-input" rows="2" placeholder="Describe your agent army concept..."></textarea>
+                        <button class="btn btn-primary" onclick="window.agentsApp.sendArmyChatMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="mt-3" id="army-suggested-agents" style="display:none;">
+                        <h6 class="small mb-2">Suggested Agents:</h6>
+                        <div class="suggested-agents-list" id="suggested-agents-list"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" onclick="window.agentsApp.createArmyFromSuggestions()">
+                        <i class="fas fa-plus me-2"></i>Create Selected Agents
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/js/shared.js"></script>
+    <script src="/static/js/customagents.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.addEventListener('click', function(e) {
+            var oc = document.getElementById('sidebarOffcanvas'), hb = document.getElementById('hamburger-btn'), oi = bootstrap.Offcanvas.getInstance(oc);
+            if (!oi) return; if (!oc.contains(e.target) && hb && !hb.contains(e.target)) oi.hide();
+        });
+    });
+    </script>
+</body>
+</html>
