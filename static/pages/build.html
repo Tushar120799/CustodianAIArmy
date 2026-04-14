@@ -88,6 +88,30 @@
     </header>
 
     <!-- MVP Builder Container -->
+    
+    <!-- Auth Modal (for GitHub connection prompt) -->
+    <div class="modal fade" id="authModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="authModalLabel">Sign In Required</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-center mb-4" style="color:var(--text-secondary);">Sign in with Google to connect your GitHub account and save your projects.</p>
+                    <div class="d-flex flex-column gap-3">
+                        <a href="/api/v1/auth/google" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fab fa-google me-2"></i> Sign in with Google
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="mvp-builder-container">
         <!-- Left Panel -->
         <div class="left-panel">

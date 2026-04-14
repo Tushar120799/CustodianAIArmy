@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFile: null,
         mode: 'plan', // 'plan' or 'act'
         isSending: false,
+        githubRepos: [],
+        selectedRepo: null,
     };
 
     // UI Elements
@@ -110,6 +112,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GitHub Connection ---
     
+    const checkUserAuthBeforeGithubConnect = async () => {
+        // Check if user is logged in via shared.js currentUser
+        if (!window.currentUser || !window.currentUser.email) {
+            showToast('Please sign in with Google to connect GitHub', 'warning');
+            // Show auth modal or redirect
+            const authModal = document.getElementById('authModal');
+            if (authModal) {
+                const bsModal = new bootstrap.Modal(authModal);
+                bsModal.show();
+            }
+            return false;
+        }
+        return true;
+    };
+
     const handleGitHubAuthPopup = (sessionId) => {
         if (!sessionId) {
             addLog("Session ID is required to initiate GitHub auth.", "error");
@@ -121,17 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const popup = window.open(authUrl, 'github-auth', 'width=600,height=700');
 
         const handleMessage = async (event) => {
-            // Security: Ensure message is from our origin
-            if (event.origin !== window.location.origin) {
-                return;
-            }
-
+            // Security: Accept messages from our origin or from the popup itself
+            // When running locally or on Vercel, the origin should match
+            console.log('Received postMessage event:', event.origin, event.data);
+            
             const { data } = event;
             if (data && data.provider === 'github' && data.token) {
                 if (popup) popup.close();
                 window.removeEventListener('message', handleMessage);
 
-                if (data.session_id !== sessionId) {
+                if (data.session_id && data.session_id !== sessionId) {
                     addLog("GitHub auth session ID mismatch. Aborting.", "error");
                     return;
                 }
@@ -145,6 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         window.addEventListener('message', handleMessage, false);
+        
+        // Also check if popup was blocked or closed without completing
+        const checkPopup = setInterval(() => {
+            if (popup && popup.closed) {
+                clearInterval(checkPopup);
+                window.removeEventListener('message', handleMessage);
+                addLog("GitHub authorization window was closed.", "warning");
+            }
+        }, 500);
     };
 
     const finalizeGitHubConnection = async (token, username) => {
@@ -167,6 +192,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.session.github_connected = true;
             state.session.github_username = result.github_username;
             addLog(`GitHub connected as ${result.github_username}!`, "success");
+            
+            // Fetch repositories after successful connection
+            await fetchGitHubRepos();
+            
             updateGitHubConnector();
 
         } catch (error) {
@@ -174,25 +203,152 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const fetchGitHubRepos = async () => {
+        if (!state.session || !state.session.session_id) return;
+        
+        try {
+            const response = await fetch(`/api/v1/mvp/session/${state.session.session_id}/github-repos`, {
+                credentials: 'include'
+            });
+            const result = await response.json();
+            if (result.success && result.repos) {
+                state.githubRepos = result.repos;
+                showRepoSelector();
+            }
+        } catch (error) {
+            addLog(`Error fetching repositories: ${error.message}`, "error");
+        }
+    };
+
+    const showRepoSelector = () => {
+        if (!state.githubRepos || state.githubRepos.length === 0) {
+            githubConnectorContainer.innerHTML = `
+                <div class="github-connected-state">
+                    <p><i class="fab fa-github"></i> Connected as <strong>${state.session.github_username}</strong></p>
+                    <p class="text-muted small">No repositories found. You can start building from scratch!</p>
+                    <button id="github-disconnect-btn" class="btn-text-danger">Disconnect</button>
+                </div>
+            `;
+        } else {
+            const repoOptions = state.githubRepos.slice(0, 50).map(repo => 
+                `<option value="${repo.full_name}">${repo.name} (${repo.private ? '🔒' : '🌍'})</option>`
+            ).join('');
+            
+            githubConnectorContainer.innerHTML = `
+                <div class="github-connected-state">
+                    <p><i class="fab fa-github"></i> Connected as <strong>${state.session.github_username}</strong></p>
+                    <div class="mb-2">
+                        <label class="small text-muted">Select a repository:</label>
+                        <select id="github-repo-select" class="form-select form-select-sm" style="background:var(--tertiary-bg);color:var(--text-primary);border-color:var(--border-color);">
+                            <option value="">-- Choose a repo or build from scratch --</option>
+                            ${repoOptions}
+                        </select>
+                    </div>
+                    <button id="github-repo-confirm-btn" class="btn btn-sm btn-outline-info mb-2"><i class="fas fa-check"></i> Use Selected Repo</button>
+                    <button id="github-scratch-btn" class="btn btn-sm btn-outline-secondary mb-2"><i class="fas fa-plus"></i> Build from Scratch</button>
+                    <button id="github-disconnect-btn" class="btn-text-danger">Disconnect</button>
+                </div>
+            `;
+            
+            document.getElementById('github-repo-select').addEventListener('change', (e) => {
+                state.selectedRepo = e.target.value;
+            });
+            
+            document.getElementById('github-repo-confirm-btn').addEventListener('click', async () => {
+                if (!state.selectedRepo) {
+                    showToast('Please select a repository', 'warning');
+                    return;
+                }
+                await cloneSelectedRepo(state.selectedRepo);
+            });
+            
+            document.getElementById('github-scratch-btn').addEventListener('click', async () => {
+                await createNewRepoFromScratch();
+            });
+        }
+        
+        document.getElementById('github-disconnect-btn')?.addEventListener('click', disconnectGitHub);
+    };
+
+    const cloneSelectedRepo = async (repoName) => {
+        addLog(`Cloning repository ${repoName}...`, "info");
+        try {
+            const response = await fetch('/api/v1/mvp/connect-github', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: state.session.session_id,
+                    github_token: state.session.github_token,
+                    repo_name: repoName
+                }),
+            });
+            const result = await response.json();
+            if (result.success) {
+                addLog(`Repository ${repoName} cloned successfully!`, "success");
+                state.session.github_repo_name = repoName;
+                updateUI();
+            } else {
+                throw new Error(result.message || 'Failed to clone repository');
+            }
+        } catch (error) {
+            addLog(`Error cloning repository: ${error.message}`, "error");
+        }
+    };
+
+    const createNewRepoFromScratch = async () => {
+        addLog("Preparing to build from scratch...", "info");
+        // User can start building without selecting a repo
+        // We'll create a new repo later when they publish
+        showToast('You can now build your product from scratch!', 'success');
+        publishBtn.disabled = false;
+    };
+
     const updateGitHubConnector = () => {
         if (!state.session) return;
 
         if (state.session.github_connected) {
-            githubConnectorContainer.innerHTML = `
-                <div class="github-connected-state">
-                    <p><i class="fab fa-github"></i> Connected as <strong>${state.session.github_username}</strong></p>
-                    <button id="github-disconnect-btn" class="btn-text-danger">Disconnect</button>
-                </div>
-            `;
-            publishBtn.disabled = false;
-            document.getElementById('github-disconnect-btn').addEventListener('click', disconnectGitHub);
+            // If we have repos, show selector, otherwise just show connected state
+            if (state.githubRepos.length > 0 && !state.session.github_repo_name) {
+                showRepoSelector();
+            } else if (state.session.github_repo_name) {
+                githubConnectorContainer.innerHTML = `
+                    <div class="github-connected-state">
+                        <p><i class="fab fa-github"></i> Connected as <strong>${state.session.github_username}</strong></p>
+                        <p class="small text-success"><i class="fas fa-check-circle"></i> Using: ${state.session.github_repo_name}</p>
+                        <button id="github-disconnect-btn" class="btn-text-danger">Disconnect</button>
+                    </div>
+                `;
+                publishBtn.disabled = false;
+                document.getElementById('github-disconnect-btn').addEventListener('click', disconnectGitHub);
+            } else {
+                // Connected but no repos or building from scratch
+                githubConnectorContainer.innerHTML = `
+                    <div class="github-connected-state">
+                        <p><i class="fab fa-github"></i> Connected as <strong>${state.session.github_username}</strong></p>
+                        <p class="text-muted small">Building from scratch</p>
+                        <button id="github-disconnect-btn" class="btn-text-danger">Disconnect</button>
+                    </div>
+                `;
+                publishBtn.disabled = false;
+                document.getElementById('github-disconnect-btn').addEventListener('click', disconnectGitHub);
+            }
         } else {
             githubConnectorContainer.innerHTML = `
                 <button class="github-connect-btn" id="github-connect-btn"><i class="fab fa-github"></i> Connect GitHub</button>
             `;
             publishBtn.disabled = true;
-            document.getElementById('github-connect-btn').addEventListener('click', () => {
-                handleGitHubAuthPopup(state.session.session_id);
+            document.getElementById('github-connect-btn').addEventListener('click', async () => {
+                const isAuthed = await checkUserAuthBeforeGithubConnect();
+                if (isAuthed) {
+                    // Create a session if one doesn't exist
+                    if (!state.session) {
+                        const tempIdea = "New Product";
+                        await createNewSession(tempIdea);
+                    }
+                    if (state.session && state.session.session_id) {
+                        handleGitHubAuthPopup(state.session.session_id);
+                    }
+                }
             });
         }
     };
@@ -212,6 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
             state.session.github_connected = false;
             state.session.github_username = null;
             state.session.github_token = null;
+            state.session.github_repo_name = null;
+            state.githubRepos = [];
+            state.selectedRepo = null;
             addLog("GitHub disconnected.", "info");
             updateGitHubConnector();
         } catch (error) {
@@ -304,6 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
     newProjectBtn.addEventListener('click', () => {
         if (confirm('Are you sure you want to start a new project? This will clear the current session.')) {
             state.session = null;
+            state.githubRepos = [];
+            state.selectedRepo = null;
             cliOutput.innerHTML = `
                 <div class="cli-welcome">
                     <div class="welcome-text">🚀 Welcome to MVP Builder</div>

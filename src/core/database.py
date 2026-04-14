@@ -83,6 +83,29 @@ def init_db():
             )
         ''')
 
+        # User GitHub connections table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_github_connections (
+                user_email TEXT PRIMARY KEY,
+                github_token TEXT NOT NULL,
+                github_username TEXT NOT NULL,
+                connected_at TEXT NOT NULL,
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
+        # User GitHub repository permissions table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_github_repo_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_email TEXT NOT NULL,
+                repo_name TEXT NOT NULL,
+                permission_granted INTEGER NOT NULL DEFAULT 1,
+                last_updated TEXT NOT NULL,
+                UNIQUE(user_email, repo_name)
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")
@@ -400,6 +423,125 @@ def upgrade_user_plan(user_email: str, new_plan: str) -> bool:
     except Exception as e:
         print(f"Error upgrading plan: {e}")
         return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GITHUB CONNECTION FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save_user_github_connection(user_email: str, github_token: str, github_username: str) -> bool:
+    """Save GitHub connection for a user."""
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+        cursor.execute('''
+            INSERT OR REPLACE INTO user_github_connections 
+            (user_email, github_token, github_username, connected_at, last_updated)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_email, github_token, github_username, now, now))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error saving GitHub connection: {e}")
+        return False
+
+
+def get_user_github_connection(user_email: str) -> Optional[Dict[str, Any]]:
+    """Get GitHub connection info for a user (returns masked token)."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT github_token, github_username, connected_at, last_updated
+        FROM user_github_connections
+        WHERE user_email = ?
+    ''', (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    def mask_token(token: str) -> str:
+        if len(token) <= 8:
+            return "****"
+        return token[:4] + "****" + token[-4:]
+
+    return {
+        "github_username": row[1],
+        "github_token_masked": mask_token(row[0]),
+        "connected_at": row[2],
+        "last_updated": row[3]
+    }
+
+
+def get_user_github_token_raw(user_email: str) -> Optional[str]:
+    """Get user's actual GitHub token for internal use only."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('SELECT github_token FROM user_github_connections WHERE user_email = ?', (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def delete_user_github_connection(user_email: str) -> bool:
+    """Delete GitHub connection for a user."""
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM user_github_connections WHERE user_email = ?', (user_email,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error deleting GitHub connection: {e}")
+        return False
+
+
+def save_user_github_repo_permissions(user_email: str, repo_permissions: List[Dict[str, Any]]) -> bool:
+    """Save repository permissions for a user."""
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+        
+        # First delete existing permissions
+        cursor.execute('DELETE FROM user_github_repo_permissions WHERE user_email = ?', (user_email,))
+        
+        # Insert new permissions
+        for perm in repo_permissions:
+            cursor.execute('''
+                INSERT INTO user_github_repo_permissions 
+                (user_email, repo_name, permission_granted, last_updated)
+                VALUES (?, ?, ?, ?)
+            ''', (user_email, perm.get('repo_name'), perm.get('permission_granted', True), now))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error saving repo permissions: {e}")
+        return False
+
+
+def get_user_github_repo_permissions(user_email: str) -> List[Dict[str, Any]]:
+    """Get repository permissions for a user."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT repo_name, permission_granted, last_updated
+        FROM user_github_repo_permissions
+        WHERE user_email = ?
+    ''', (user_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [
+        {"repo_name": row[0], "permission_granted": bool(row[1]), "last_updated": row[2]}
+        for row in rows
+    ]
 
 
 # Initialize the database when this module is loaded

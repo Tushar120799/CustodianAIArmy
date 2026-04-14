@@ -1322,7 +1322,8 @@ async def mvp_get_github_repos(
     try:
         mvp_builder = get_mvp_builder_instance()
         await get_owned_mvp_session(mvp_session_id, current_user)
-        repos = await mvp_builder.get_github_repos(mvp_session_id)
+        # Pass user_email to filter repos by permissions
+        repos = await mvp_builder.get_github_repos(mvp_session_id, user_email=current_user.email)
         return {"success": True, "repos": repos}
     except HTTPException:
         raise
