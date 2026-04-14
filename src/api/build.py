@@ -370,6 +370,13 @@ class MVPBuilder:
                 session.github_username = login
                 session.github_connected = True
 
+                # Save GitHub connection to database for the user
+                try:
+                    from ..core.database import save_user_github_connection
+                    save_user_github_connection(session.user_email, github_token, login)
+                except Exception as db_err:
+                    logger.warning(f"Could not save GitHub connection to DB: {db_err}")
+
                 # 2. If repo_name is provided, clone it
                 if repo_name:
                     # Ensure the repo_name is in the format 'owner/repo'
@@ -428,11 +435,21 @@ class MVPBuilder:
             session.github_connected = False # Ensure it's marked as not connected on failure
             return {"success": False, "message": str(e)}
 
-    async def get_github_repos(self, session_id: str) -> List[Dict[str, Any]]:
-        """Fetch list of repositories for the connected GitHub user."""
+    async def get_github_repos(self, session_id: str, user_email: str = None) -> List[Dict[str, Any]]:
+        """Fetch list of repositories for the connected GitHub user, filtered by permissions."""
         session = self.get_session(session_id)
         if not session or not session.github_token:
             raise ValueError("GitHub not connected for this session.")
+
+        # Get user's saved repo permissions from database
+        allowed_repos = set()
+        if user_email:
+            try:
+                from ..core.database import get_user_github_repo_permissions
+                perms = get_user_github_repo_permissions(user_email)
+                allowed_repos = {p['repo_name'] for p in perms if p.get('permission_granted', True)}
+            except Exception as e:
+                logger.warning(f"Could not fetch repo permissions: {e}")
 
         repos = []
         page = 1
@@ -449,6 +466,10 @@ class MVPBuilder:
                     if not current_page_repos:
                         break
 
+                    # Filter by permissions if we have any saved
+                    if allowed_repos:
+                        current_page_repos = [r for r in current_page_repos if r['full_name'] in allowed_repos]
+                    
                     repos.extend(current_page_repos)
                     page += 1
             
