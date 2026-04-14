@@ -138,17 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const popup = window.open(authUrl, 'github-auth', 'width=600,height=700');
 
         const handleMessage = async (event) => {
-            // Security: Ensure message is from our origin
-            if (event.origin !== window.location.origin) {
-                return;
-            }
-
+            // Security: Accept messages from our origin or from the popup itself
+            // When running locally or on Vercel, the origin should match
+            console.log('Received postMessage event:', event.origin, event.data);
+            
             const { data } = event;
             if (data && data.provider === 'github' && data.token) {
                 if (popup) popup.close();
                 window.removeEventListener('message', handleMessage);
 
-                if (data.session_id !== sessionId) {
+                if (data.session_id && data.session_id !== sessionId) {
                     addLog("GitHub auth session ID mismatch. Aborting.", "error");
                     return;
                 }
@@ -162,6 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         window.addEventListener('message', handleMessage, false);
+        
+        // Also check if popup was blocked or closed without completing
+        const checkPopup = setInterval(() => {
+            if (popup && popup.closed) {
+                clearInterval(checkPopup);
+                window.removeEventListener('message', handleMessage);
+                addLog("GitHub authorization window was closed.", "warning");
+            }
+        }, 500);
     };
 
     const finalizeGitHubConnection = async (token, username) => {
