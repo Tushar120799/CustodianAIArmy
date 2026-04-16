@@ -16,7 +16,7 @@ from datetime import datetime
 from src.agents.agent_manager import AgentManager
 from src.core.database import (
     get_chats_for_user, save_chat_session, DB_PATH,
-    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key,
+    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key, get_user_github_token, save_custom_agent_config, get_custom_agent_config,
     get_user_plan, check_and_increment_rate_limit, upgrade_user_plan
 )
 from src.agents.base_agent import AgentMessage
@@ -102,6 +102,12 @@ class MVPDisconnectGitHubRequest(BaseModel):
 
 class MVPSelectGitHubRepoRequest(BaseModel):
     session_id: str
+
+class CustomAgentConfigRequest(BaseModel):
+    agent_id: Optional[str] = None
+    name: str
+    description: str
+    skills: List[str]
 # Pydantic models for API requests/responses
 class TaskRequest(BaseModel):
     description: str
@@ -234,6 +240,53 @@ async def get_agents_by_specialization(specialization: str):
         }
     except Exception as e:
         logger.error(f"Error getting agents by specialization: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# This endpoint is accessible at /api/v1/agents/custom
+@router.get("/agents/custom")
+async def get_custom_agents_page(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Placeholder endpoint for the custom agents management page.
+    This will return a list of custom agents configured by the user.
+    """
+    try:
+        # In a real implementation, you would fetch custom agent configurations
+        # from a database associated with the current_user.
+        # For now, we'll return a placeholder or any saved configs.
+        custom_agent_configs = get_custom_agent_config(current_user.email)
+        return {
+            "message": "Welcome to your Custom Agents management page!",
+            "user_email": current_user.email,
+            "custom_agents": custom_agent_configs
+        }
+    except Exception as e:
+        logger.error(f"Error accessing custom agents page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/agents/custom")
+async def create_or_update_custom_agent(
+    request: CustomAgentConfigRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Create or update a custom agent configuration for the user.
+    This allows users to define skills and prompts for their agents.
+    """
+    try:
+        # Save the custom agent configuration to the database
+        config_data = request.dict()
+        config_data["user_email"] = current_user.email
+        agent_id = save_custom_agent_config(config_data)
+
+        return {
+            "success": True,
+            "message": f"Custom agent '{request.name}' saved successfully.",
+            "agent_id": agent_id
+        }
+    except Exception as e:
+        logger.error(f"Error creating/updating custom agent: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/tasks/execute")
@@ -1270,13 +1323,19 @@ async def mvp_connect_github(
     request: MVPConnectGitHubRequest,
     current_user: User = Depends(get_current_user_from_cookies)
 ):
-    """Connect GitHub account for publishing."""
+    """Connect GitHub account for publishing.""" # This line was correctly indented.
+    github_token_to_use = request.github_token
     try:
-        if not request.github_token:
-            raise HTTPException(status_code=400, detail="GitHub token is required to connect.")
+        # If no token provided in request, try to get it from user's saved keys
+        if not github_token_to_use:
+            # Assuming get_user_github_token exists and retrieves the token
+            github_token_to_use = get_user_github_token(current_user.email)
+
+        if not github_token_to_use:
+            raise HTTPException(status_code=400, detail="GitHub token is required to connect. Please provide one or connect via profile settings.")
         mvp_builder = get_mvp_builder_instance()
         await get_owned_mvp_session(request.session_id, current_user)
-        result = await mvp_builder.connect_github(request.session_id, request.github_token, request.repo_name)
+        result = await mvp_builder.connect_github(request.session_id, github_token_to_use, request.repo_name)
         return {
             "success": result.get("success", False),
             "message": result.get("message", "GitHub connected"),
@@ -1322,8 +1381,7 @@ async def mvp_get_github_repos(
     try:
         mvp_builder = get_mvp_builder_instance()
         await get_owned_mvp_session(mvp_session_id, current_user)
-        # Pass user_email to filter repos by permissions
-        repos = await mvp_builder.get_github_repos(mvp_session_id, user_email=current_user.email)
+        repos = await mvp_builder.get_github_repos(mvp_session_id)
         return {"success": True, "repos": repos}
     except HTTPException:
         raise

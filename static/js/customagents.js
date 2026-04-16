@@ -13,12 +13,16 @@ class CustomAgentsApp {
         this.creationMode = 'single'; // 'single' or 'army'
         this.currentChatHistory = [];
         this.suggestedAgents = [];
+        this.librarySkills = [];
+        this.libraryMCPs = [];
     }
 
     async init() {
         await this.loadCustomAgents();
         await this.loadSkills();
+        await this.loadLibraryData();
         this.initChatInput();
+        this.renderLibrary();
     }
 
     async loadCustomAgents() {
@@ -42,6 +46,54 @@ class CustomAgentsApp {
         } catch (e) {
             console.error('Failed to load skills:', e);
             this.skills = [];
+        }
+    }
+
+    async loadLibraryData() {
+        // Using placeholder data as requested
+        this.librarySkills = Array.from({ length: 22 }, (_, i) => ({
+            id: `lib_skill_${i}`,
+            name: `Library Skill ${i + 1}`,
+            description: `This is a short description for library skill #${i + 1}. It enables a specific capability.`
+        }));
+        this.libraryMCPs = Array.from({ length: 25 }, (_, i) => ({
+            id: `lib_mcp_${i}`,
+            name: `MCP Server ${i + 1}`,
+            description: `Description for MCP server tool #${i + 1}. It connects to an external service.`
+        }));
+    }
+
+    renderLibrary(skillFilter = '', mcpFilter = '') {
+        const skillsContainer = document.getElementById('library-skills-list');
+        const mcpContainer = document.getElementById('library-mcp-list');
+
+        const renderItem = (item) => `
+            <div class="library-item">
+                <div class="library-item-info">
+                    <div class="library-item-name">${this.escapeHtml(item.name)}</div>
+                    <div class="library-item-desc">${this.escapeHtml(item.description)}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-info" onclick="window.agentsApp.addLibraryItem('${item.id.startsWith('lib_skill') ? 'skill' : 'mcp'}', '${item.id}')">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+            </div>
+        `;
+
+        if (skillsContainer) {
+            const filteredSkills = this.librarySkills.filter(s => s.name.toLowerCase().includes(skillFilter.toLowerCase()));
+            skillsContainer.innerHTML = filteredSkills.map(renderItem).join('');
+        }
+        if (mcpContainer) {
+            const filteredMCPs = this.libraryMCPs.filter(m => m.name.toLowerCase().includes(mcpFilter.toLowerCase()));
+            mcpContainer.innerHTML = filteredMCPs.map(renderItem).join('');
+        }
+    }
+
+    filterLibrary(type, query) {
+        if (type === 'skills') {
+            this.renderLibrary(query, '');
+        } else if (type === 'mcp') {
+            this.renderLibrary('', query);
         }
     }
 
@@ -350,6 +402,27 @@ class CustomAgentsApp {
         const current = this.getSelectedSkills();
         const filtered = current.filter(id => id !== skillId);
         this.renderSelectedSkills(filtered);
+    }
+
+    addLibraryItem(type, itemId) {
+        if (type === 'skill') {
+            const skill = this.librarySkills.find(s => s.id === itemId);
+            if (!skill) return;
+            // To reuse existing logic, we add it to the main skills list if not present
+            if (!this.skills.find(s => s.id === skill.id)) {
+                this.skills.push({ ...skill, category: 'technical' });
+            }
+            this.renderSelectedSkills([...this.getSelectedSkills(), skill.id]);
+            showToast(`Skill "${skill.name}" added!`, 'success');
+        } else if (type === 'mcp') {
+            const mcp = this.libraryMCPs.find(m => m.id === itemId);
+            if (!mcp) return;
+            if (!this.mcpTools.find(t => t.id === mcp.id)) {
+                this.mcpTools.push({ ...mcp, endpoint: '', config: {} });
+            }
+            this.renderSelectedMCPTools([...this.getSelectedMCPTools(), mcp.id]);
+            showToast(`MCP "${mcp.name}" added!`, 'success');
+        }
     }
 
     openAddMCPModal() {
