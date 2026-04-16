@@ -106,6 +106,18 @@ def init_db():
             )
         ''')
 
+        # Custom Agent Configurations table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS custom_agent_configs (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                skills TEXT NOT NULL,
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")
@@ -485,6 +497,10 @@ def get_user_github_token_raw(user_email: str) -> Optional[str]:
     conn.close()
     return row[0] if row else None
 
+# Alias for backward compatibility or simpler naming
+def get_user_github_token(user_email: str) -> Optional[str]:
+    """Alias for get_user_github_token_raw."""
+    return get_user_github_token_raw(user_email)
 
 def delete_user_github_connection(user_email: str) -> bool:
     """Delete GitHub connection for a user."""
@@ -499,6 +515,53 @@ def delete_user_github_connection(user_email: str) -> bool:
         print(f"Error deleting GitHub connection: {e}")
         return False
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CUSTOM AGENT CONFIGURATION FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save_custom_agent_config(config_data: Dict[str, Any]) -> str:
+    """Save or update a custom agent configuration."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    
+    agent_id = config_data.get("agent_id")
+    if not agent_id:
+        agent_id = str(uuid.uuid4())
+        
+    skills_str = json.dumps(config_data.get("skills", []))
+    now = datetime.utcnow().isoformat()
+    
+    cursor.execute('''
+        INSERT INTO custom_agent_configs (id, user_email, name, description, skills, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name=excluded.name,
+            description=excluded.description,
+            skills=excluded.skills,
+            last_updated=excluded.last_updated
+    ''', (
+        agent_id, 
+        config_data.get("user_email"), 
+        config_data.get("name", "Unnamed Custom Agent"), 
+        config_data.get("description", ""), 
+        skills_str, 
+        now
+    ))
+    
+    conn.commit()
+    conn.close()
+    return agent_id
+
+def get_custom_agent_config(user_email: str) -> List[Dict[str, Any]]:
+    """Get all custom agent configurations for a user."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, description, skills, last_updated FROM custom_agent_configs WHERE user_email = ?', (user_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [{"id": row[0], "name": row[1], "description": row[2], "skills": json.loads(row[3]), "last_updated": row[4]} for row in rows]
 
 def save_user_github_repo_permissions(user_email: str, repo_permissions: List[Dict[str, Any]]) -> bool:
     """Save repository permissions for a user."""

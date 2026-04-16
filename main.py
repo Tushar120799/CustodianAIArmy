@@ -40,6 +40,7 @@ app.add_middleware(
 )
 
 # Include API routes
+# All routes in api_router will be prefixed with /api/v1 (e.g., /api/v1/agents)
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(auth_router)
 
@@ -83,6 +84,11 @@ async def build_page():
 @app.get("/payment.html")
 async def payment_page():
     return FileResponse("static/payment.html")
+
+@app.get("/agents")
+async def agents_page():
+    """Serve the Custom Agents page"""
+    return FileResponse("static/pages/customagents.html")
 
 if __name__ == "__main__":
     uvicorn.run(

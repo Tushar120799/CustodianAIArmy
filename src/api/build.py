@@ -47,7 +47,7 @@ class MVPPhase:
             "tasks": self.tasks,
             "progress": self.progress,
             "status": self.status,
-            "output": self.output
+            "output": self.output,
         }
 
 
@@ -94,11 +94,13 @@ class MVPSession:
         return min(100, total // len(self.phases))
 
     def add_log(self, message: str, level: str = "info"):
-        self.logs.append({
-            "timestamp": datetime.utcnow().isoformat(),
-            "message": message,
-            "level": level
-        })
+        self.logs.append(
+            {
+                "timestamp": datetime.utcnow().isoformat(),
+                "message": message,
+                "level": level,
+            }
+        )
         logger.info(f"[MVPSession {self.session_id}] {message}")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -118,7 +120,7 @@ class MVPSession:
             "phases": [p.to_dict() for p in self.phases],
             "files": list(self.files.keys()),
             "chat_history": self.chat_history[-20:],  # Last 20 messages
-            "logs": self.logs[-50:]  # Last 50 logs
+            "logs": self.logs[-50:],  # Last 50 logs
         }
 
 
@@ -158,7 +160,9 @@ class MVPBuilder:
         """Get an existing session by ID."""
         return self.sessions.get(session_id)
 
-    async def send_message(self, session_id: str, message: str, mode: str = "plan", agent_name: Optional[str] = None) -> Dict[str, Any]:
+    async def send_message(
+        self, session_id: str, message: str, mode: str = "plan", agent_name: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Send a message to the MVP builder for a session.
 
@@ -170,12 +174,14 @@ class MVPBuilder:
             raise ValueError(f"Session {session_id} not found")
 
         session.mode = mode
-        session.chat_history.append({
-            "role": "user",
-            "content": message,
-            "timestamp": datetime.utcnow().isoformat(),
-            "mode": mode
-        })
+        session.chat_history.append(
+            {
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.utcnow().isoformat(),
+                "mode": mode,
+            }
+        )
 
         # Get appropriate agent for current phase
         current_phase = session.current_phase
@@ -197,24 +203,27 @@ class MVPBuilder:
         # Execute agent call
         try:
             from src.agents.base_agent import AgentMessage
+
             msg = AgentMessage(
                 sender_id="mvp_builder",
                 receiver_id=agent.agent_id,
                 content=prompt,
                 message_type="chat",
-                metadata={"phase": current_phase.name, "mode": mode}
+                metadata={"phase": current_phase.name, "mode": mode},
             )
 
             response = await self.agent_manager.send_message(msg)
 
             # Process response
-            session.chat_history.append({
-                "role": "assistant",
-                "content": response.content,
-                "timestamp": datetime.utcnow().isoformat(),
-                "agent_name": agent.name,
-                "phase": current_phase.name
-            })
+            session.chat_history.append(
+                {
+                    "role": "assistant",
+                    "content": response.content,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "agent_name": agent.name,
+                    "phase": current_phase.name,
+                }
+            )
 
             session.add_log(f"Agent {agent.name} responded in {current_phase.name} phase")
 
@@ -228,7 +237,7 @@ class MVPBuilder:
                 "response": response.content,
                 "agent_name": agent.name,
                 "phase": current_phase.name,
-                "progress": session.overall_progress
+                "progress": session.overall_progress,
             }
 
         except Exception as e:
@@ -248,7 +257,7 @@ class MVPBuilder:
             "architect": "ArchitectAI",
             "technical": "TechnicalAI",
             "designer": "DesignerAI",
-            "coder": "CoderAI"
+            "coder": "CoderAI",
         }
 
         agent_name = fallback_map.get(specialization, "CustodianAI")
@@ -293,23 +302,21 @@ class MVPBuilder:
                 f"User message: {user_message}\n"
                 f"Mode: {mode.upper()}\n\n"
                 f"Write clean, well-documented code. Use MCP filesystem tools to create files."
-            )
+            ),
         }
 
         base_prompt = phase_prompts.get(current_phase.name, user_message)
 
         # Add conversation history context (last 6 messages), excluding the most recent user message which is already in the prompt
-        recent_history = session.chat_history[-7:-1] # Get up to 6 previous messages
+        recent_history = session.chat_history[-7:-1]  # Get up to 6 previous messages
         if recent_history:
             history_context = "\n\nHere is the recent conversation history for context:\n"
             for msg in recent_history:
                 role = msg.get("role", "unknown")
-                # Use a clear role mapping
                 display_role = "User" if role == "user" else "Assistant"
                 content = msg.get("content", "")
                 history_context += f"--- {display_role} ---\n{content}\n\n"
-            
-            # Insert history before the user's latest message for better context flow
+
             if "User message:" in base_prompt:
                 base_prompt = base_prompt.replace("User message:", f"{history_context}\nUser message:")
             else:
@@ -341,7 +348,7 @@ class MVPBuilder:
             return {
                 "success": True,
                 "new_phase": next_phase.name,
-                "progress": session.overall_progress
+                "progress": session.overall_progress,
             }
 
         return {"success": False, "message": "Already at final phase"}
@@ -366,13 +373,14 @@ class MVPBuilder:
                 login = user_data.get("login")
                 if not login:
                     raise ValueError("Could not retrieve GitHub username.")
-                
+
                 session.github_username = login
                 session.github_connected = True
 
                 # Save GitHub connection to database for the user
                 try:
                     from ..core.database import save_user_github_connection
+
                     save_user_github_connection(session.user_email, github_token, login)
                 except Exception as db_err:
                     logger.warning(f"Could not save GitHub connection to DB: {db_err}")
@@ -380,7 +388,7 @@ class MVPBuilder:
                 # 2. If repo_name is provided, clone it
                 if repo_name:
                     # Ensure the repo_name is in the format 'owner/repo'
-                    if '/' not in repo_name:
+                    if "/" not in repo_name:
                         full_repo_name = f"{login}/{repo_name}"
                     else:
                         full_repo_name = repo_name
@@ -396,13 +404,18 @@ class MVPBuilder:
                     temp_clone_dir = session.workspace_path.parent / f"{session.session_id}_temp_clone"
                     if temp_clone_dir.exists():
                         import shutil
+
                         shutil.rmtree(temp_clone_dir)
                     temp_clone_dir.mkdir()
 
                     process = await asyncio.create_subprocess_exec(
-                        'git', 'clone', clone_url, '.', # Clone into current dir
+                        "git",
+                        "clone",
+                        clone_url,
+                        ".",
                         cwd=str(temp_clone_dir),
-                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     stdout, stderr = await process.communicate()
 
@@ -411,53 +424,60 @@ class MVPBuilder:
 
                     # Move cloned files to the actual workspace
                     for item in temp_clone_dir.iterdir():
-                        if item.name != '.git': # Exclude the .git directory itself from direct move
+                        if item.name != ".git":
                             import shutil
+
                             shutil.move(str(item), str(session.workspace_path / item.name))
-                    
+
                     # Move .git directory separately
                     git_dir = temp_clone_dir / ".git"
                     if git_dir.exists():
                         import shutil
+
                         shutil.move(str(git_dir), str(session.workspace_path / ".git"))
 
                     import shutil
+
                     shutil.rmtree(temp_clone_dir)
 
                     session.add_log(f"Successfully cloned repository {full_repo_name}.")
 
                 session.add_log(f"GitHub account connected for user: {session.github_username}")
 
-            return {"success": True, "message": f"GitHub connected as {session.github_username}", "github_username": session.github_username}
+            return {
+                "success": True,
+                "message": f"GitHub connected as {session.github_username}",
+                "github_username": session.github_username,
+            }
         except Exception as e:
             logger.error(f"Error connecting to GitHub: {e}")
             session.add_log(f"Failed to connect GitHub: {str(e)}", "error")
-            session.github_connected = False # Ensure it's marked as not connected on failure
+            session.github_connected = False
             return {"success": False, "message": str(e)}
 
-    async def get_github_repos(self, session_id: str, user_email: str = None) -> List[Dict[str, Any]]:
+    async def get_github_repos(self, session_id: str, user_email: Optional[str] = None) -> List[Dict[str, Any]]:
         """Fetch list of repositories for the connected GitHub user, filtered by permissions."""
         session = self.get_session(session_id)
         if not session or not session.github_token:
             raise ValueError("GitHub not connected for this session.")
 
-        # Get user's saved repo permissions from database
+        # Get user's saved repo permissions
         allowed_repos = set()
         if user_email:
             try:
                 from ..core.database import get_user_github_repo_permissions
+
                 perms = get_user_github_repo_permissions(user_email)
-                allowed_repos = {p['repo_name'] for p in perms if p.get('permission_granted', True)}
+                allowed_repos = {p["repo_name"] for p in perms if p.get("permission_granted", True)}
             except Exception as e:
                 logger.warning(f"Could not fetch repo permissions: {e}")
 
-        repos = []
+        repos: List[Dict[str, Any]] = []
         page = 1
         try:
             async with httpx.AsyncClient() as client:
                 while True:
                     headers = {"Authorization": f"token {session.github_token}"}
-                    # Fetch repos user has explicit access to (includes private)
                     repos_url = f"https://api.github.com/user/repos?type=all&per_page=100&page={page}"
                     response = await client.get(repos_url, headers=headers)
                     response.raise_for_status()
@@ -466,13 +486,12 @@ class MVPBuilder:
                     if not current_page_repos:
                         break
 
-                    # Filter by permissions if we have any saved
                     if allowed_repos:
-                        current_page_repos = [r for r in current_page_repos if r['full_name'] in allowed_repos]
-                    
+                        current_page_repos = [r for r in current_page_repos if r["full_name"] in allowed_repos]
+
                     repos.extend(current_page_repos)
                     page += 1
-            
+
             session.add_log(f"Fetched {len(repos)} repositories from GitHub.")
             return repos
         except Exception as e:
@@ -520,21 +539,21 @@ class MVPBuilder:
         if not session:
             return []
 
-        tree = []
+        tree: List[Dict[str, Any]] = []
         for file_path in sorted(session.files.keys()):
             parts = file_path.split("/")
             current_level = tree
 
             for i, part in enumerate(parts):
                 if i == len(parts) - 1:
-                    # File
-                    current_level.append({
-                        "type": "file",
-                        "name": part,
-                        "path": file_path
-                    })
+                    current_level.append(
+                        {
+                            "type": "file",
+                            "name": part,
+                            "path": file_path,
+                        }
+                    )
                 else:
-                    # Directory
                     existing = next((x for x in current_level if x.get("name") == part), None)
                     if not existing:
                         dir_node = {"type": "directory", "name": part, "children": []}
@@ -556,96 +575,3 @@ def get_mvp_builder(agent_manager: AgentManager) -> MVPBuilder:
     if _mvp_builder is None:
         _mvp_builder = MVPBuilder(agent_manager)
     return _mvp_builder
-
-    async def _run_git_command(self, cwd: Path, command: List[str]):
-        """Helper to run a git command in the workspace."""
-        logger.info(f"Running git command: {' '.join(command)} in {cwd}")
-        process = await asyncio.create_subprocess_exec(
-            'git', *command,
-            cwd=str(cwd),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-        if process.returncode != 0:
-            error_message = stderr.decode().strip()
-            logger.error(f"Git command failed: {error_message}")
-            raise Exception(f"Git command failed: {error_message}")
-        return stdout.decode().strip()
-
-    async def publish_to_github(self, session_id: str, repo_name: Optional[str] = None, commit_message: str = "feat: Initial MVP build") -> Dict[str, Any]:
-        """Publish the MVP to GitHub by creating a new repo or a pull request."""
-        session = self.get_session(session_id)
-        if not session:
-            raise ValueError(f"Session {session_id} not found")
-        if not all([session.github_connected, session.github_username, session.github_token, session.workspace_path]):
-            return {"success": False, "message": "GitHub not connected"}
-
-        try:
-            if session.github_repo_name: # Existing repo
-                session.add_log("Starting publication to existing repository...")
-                # 1. Create and switch to a new feature branch
-                feature_branch = f"feature/mvp-build-{uuid.uuid4().hex[:6]}"
-                await self._run_git_command(session.workspace_path, ['checkout', '-b', feature_branch])
-                session.add_log(f"Created feature branch: {feature_branch}")
-
-                # 2. Add all changes and commit
-                await self._run_git_command(session.workspace_path, ['add', '.'])
-                await self._run_git_command(session.workspace_path, ['commit', '-m', commit_message])
-                session.add_log("Committed changes to feature branch.")
-
-                # 3. Push the feature branch to origin
-                await self._run_git_command(session.workspace_path, ['push', '-u', 'origin', feature_branch])
-                session.add_log(f"Pushed feature branch '{feature_branch}' to remote.")
-
-                # 4. Create a pull request using the GitHub API
-                session.add_log("Creating pull request...")
-                headers = {
-                    "Authorization": f"token {session.github_token}",
-                    "Accept": "application/vnd.github.v3+json"
-                }
-                pr_data = {
-                    "title": commit_message,
-                    "head": feature_branch,
-                    "base": "main", # Or determine default branch
-                    "body": "This pull request was automatically generated by the CustodianAI MVP Builder."
-                }
-                api_url = f"https://api.github.com/repos/{session.github_repo_name}/pulls"
-                
-                async with httpx.AsyncClient() as client:
-                    pr_response = await client.post(api_url, headers=headers, json=pr_data)
-                    
-                    if pr_response.status_code not in [201, 422]: # 422 means PR already exists
-                        pr_response.raise_for_status()
-
-                    pr_json = pr_response.json()
-                    if "html_url" in pr_json:
-                        pr_url = pr_json["html_url"]
-                        session.add_log(f"Successfully created pull request: {pr_url}")
-                        return {"success": True, "message": "Pull request created successfully.", "repo_url": pr_url}
-                    elif pr_response.status_code == 422:
-                         # Handle case where PR already exists
-                        session.add_log("Pull request may already exist for this branch.")
-                        pr_url = f"https://github.com/{session.github_repo_name}/pulls"
-                        return {"success": True, "message": "Pull request may already exist.", "repo_url": pr_url}
-                    else:
-                        raise Exception(f"Failed to get PR URL from response: {pr_json}")
-
-            else: # New repo
-                if not repo_name:
-                    return {"success": False, "message": "New repository name is required."}
-                
-                # Implementation for creating a new repo would go here.
-                # This requires 'repo' scope on the PAT.
-                # 1. Call GitHub API to create repo.
-                # 2. git init, add, commit
-                # 3. git remote add origin ...
-                # 4. git push -u origin main
-                session.add_log("New repository creation is not yet fully implemented.")
-                repo_url = f"https://github.com/{session.github_repo_name}"
-                return {"success": False, "message": "New repository creation not implemented.", "repo_url": repo_url}
-
-        except Exception as e:
-            logger.error(f"Error publishing to GitHub: {e}")
-            session.add_log(f"Error publishing to GitHub: {str(e)}", "error")
-            return {"success": False, "message": str(e)}

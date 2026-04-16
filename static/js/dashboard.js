@@ -31,6 +31,19 @@ class DashboardApp {
         try {
             const data = await apiFetch('/agents/main');
             this.agents = data.main_agents || [];
+            
+            // Also load published custom agents and merge them
+            try {
+                const customData = await apiFetch('/agents/custom/published');
+                const publishedCustom = (customData.agents || []).map(agent => ({
+                    ...agent,
+                    is_custom: true
+                }));
+                this.agents = [...this.agents, ...publishedCustom];
+            } catch (e) {
+                console.log('No published custom agents or endpoint not available');
+            }
+            
             this.renderAgentList();
             this.renderModalAgentList();
             this.renderMobileSelect();
@@ -53,9 +66,12 @@ class DashboardApp {
                 data-agent-id="${agent.agent_id}"
                 onclick="window.dashApp.selectAgentById('${agent.agent_id}')">
                 <i class="fas fa-robot text-info"></i>
-                <div>
-                    <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">${agent.name}</div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);">${agent.specialization || 'general'}</div>
+                <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">${this.escapeHtml(agent.name)}</span>
+                        ${agent.is_custom ? '<span class="badge" style="background:var(--accent-purple);color:#fff;font-size:0.6rem;padding:0.15rem 0.4rem;">CUSTOM</span>' : ''}
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);">${this.escapeHtml(agent.specialization || 'general')}</div>
                 </div>
             </div>
         `).join('');
@@ -67,12 +83,22 @@ class DashboardApp {
         container.innerHTML = this.agents.map(agent => `
             <div class="agent-card" onclick="window.dashApp.selectAgentById('${agent.agent_id}'); bootstrap.Modal.getInstance(document.getElementById('agentSelectModal'))?.hide();">
                 <div class="agent-header">
-                    <span class="agent-title"><i class="fas fa-robot me-1"></i>${agent.name}</span>
-                    <span class="agent-type">${agent.specialization || 'general'}</span>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex:1;">
+                        <span class="agent-title"><i class="fas fa-robot me-1"></i>${this.escapeHtml(agent.name)}</span>
+                        ${agent.is_custom ? '<span class="badge" style="background:var(--accent-purple);color:#fff;font-size:0.6rem;">CUSTOM</span>' : ''}
+                    </div>
+                    <span class="agent-type">${this.escapeHtml(agent.specialization || 'general')}</span>
                 </div>
-                <div style="font-size:0.8rem;color:var(--text-secondary);">${(agent.capabilities||[]).slice(0,3).map(c=>c.name||c).join(', ')}</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">${(agent.capabilities||[]).slice(0,3).map(c=>this.escapeHtml(c.name||c)).join(', ')}</div>
             </div>
         `).join('');
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     renderMobileSelect() {
