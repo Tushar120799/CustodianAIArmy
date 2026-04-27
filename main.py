@@ -90,6 +90,11 @@ async def agents_page():
     """Serve the Custom Agents page"""
     return FileResponse("static/pages/customagents.html")
 
+@app.get("/finance")
+async def finance_page():
+    """Serve the Finance AI page"""
+    return FileResponse("static/pages/finance.html")
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",

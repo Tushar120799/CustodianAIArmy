@@ -7,6 +7,28 @@
         "serve"
       ],
       "type": "stdio"
+    },
+    "kite": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp.kite.trade/mcp"
+      ]
+    },
+    "groww": {
+      "command": "npx",
+      "args": [
+        "mcp-remote@0.1.18",
+        "https://mcp.groww.in/mcp",
+        "52155"
+      ]
+    },
+    "zerodha": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp.zerodha.com/mcp"
+      ]
     }
   }
 }

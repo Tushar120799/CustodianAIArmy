@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/"> <!-- Ensures relative paths work correctly -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance AI Dashboard</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        /* Add specific styles for the finance dashboard here */
+        .finance-dashboard-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr; /* Main content and AI sidebar */
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 60px); /* Adjust for header if present */
+            overflow: hidden;
+        }
+        .main-content {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--secondary-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--neon-glow-blue);
+        }
+        .dashboard-section {
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--neon-glow-cyan);
+            min-height: 200px;
+        }
+        .ai-sidebar {
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--neon-glow-purple);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .ai-chat-window {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .ai-chat-input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+        }
+        /* Broker Connection Modal */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: var(--secondary-bg); padding: 20px; border-radius: 8px;
+            box-shadow: var(--neon-glow-purple); width: 90%; max-width: 400px;
+        }
+        .modal-header { padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .modal-body { padding-top: 20px; }
+        .close-button { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--primary-bg); color: var(--text-primary); }
+        .status-indicator.disconnected { background-color: #ff4d4d; }
+        .status-indicator.connected { background-color: #4dff4d; }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        #broker-connect-modal .step { display: none; }
+        #broker-connect-modal .step.active { display: block; }
+        #connection-status-text { margin-left: 5px; }
+    </style>
+    <style>
+        /* Strategy Studio Styles */
+        .strategy-studio-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .strategy-library ul {
+            list-style: none;
+            padding: 0;
+        }
+        .strategy-library .strategy-item {
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .strategy-library .strategy-item:hover {
+            background-color: var(--primary-accent);
+        }
+        .strategy-editor textarea {
+            width: 100%;
+            height: 150px;
+            margin-top: 10px;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            resize: vertical;
+        }
+        .editor-toolbar button {
+            margin-right: 5px;
+        }
+        /* Backtesting Results Styles */
+        #backtest-results-container {
+            margin-top: 15px;
+            display: none; /* Hidden by default */
+        }
+        .backtest-results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .metric-card {
+            background: var(--primary-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+         /* Watchlist Styles */
+        #market-watchlist {
+            list-style: none;
+            padding: 0;
+        }
+        .watchlist-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease;
+        }
+        .watchlist-item .symbol { font-weight: bold; }
+        .watchlist-item .price { font-family: monospace; }
+        .watchlist-item.price-up {
+            background-color: rgba(0, 255, 0, 0.1);
+        }
+        .watchlist-item.price-down {
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+        /* Chart Styles */
+        .market-dashboard-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr; /* Watchlist and Chart */
+            gap: 20px;
+            height: 400px; /* Example height */
+        }
+        #market-chart-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .chart-header h4 {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        /* Tab Navigation */
+        .finance-nav-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .finance-nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .finance-nav-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .finance-tab-content {
+            display: none;
+        }
+        .finance-tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="finance-dashboard-container">
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header-panel">
+                <div>
+                    <span id="connection-status-indicator" class="status-indicator disconnected"></span>
+                    <span id="connection-status-text">Disconnected</span>
+                </div>
+                <div>Broker: <select id="broker-selector"><option value="zerodha">Zerodha</option><option value="groww">Groww</option><option value="kite">Kite</option></select>
+                    <button id="connect-broker-btn" class="btn btn-sm btn-outline-info">Connect</button></div>
+                <div>Mode: <button>Live</button> / <button class="active">Paper Trading</button></div>
+                <div>Account Balance: $0.00</div>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="finance-nav-tabs">
+                <div class="finance-nav-tab active" data-tab="dashboard">Dashboard</div>
+                <div class="finance-nav-tab" data-tab="portfolio">Portfolio</div>
+                <div class="finance-nav-tab" data-tab="strategies">Strategies</div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="finance-tab-content active">
+                <h2>Market Dashboard</h2>
+                <div class="market-dashboard-layout">
+                    <div id="live-market-data">
+                        <p>Connecting to live market data...</p>
+                        <ul id="market-watchlist"></ul>
+                    </div>
+                    <div>
+                        <div class="chart-header">
+                            <h4 id="chart-title">Real-Time Chart: AAPL</h4>
+                            <button id="explain-chart-btn" class="btn btn-sm btn-outline-info"><i class="fas fa-info-circle"></i> Explain this</button>
+                        </div>
+                        <div id="market-chart-container" style="height: calc(100% - 30px);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio Tab -->
+            <div id="tab-portfolio" class="finance-tab-content">
+                <h2>Portfolio Overview</h2>
+                <div id="portfolio-analytics-container"></div>
+            </div>
+
+            <!-- Strategies Tab -->
+            <div id="tab-strategies" class="finance-tab-content">
+                <h2>Strategy Studio</h2>
+                <div class="strategy-studio-layout">
+                    <div class="strategy-library">
+                        <h3>Pre-built Strategies</h3>
+                        <ul>
+                            <li><button class="strategy-item"><i class="fas fa-chart-line"></i> Moving Average Crossover</button></li>
+                            <li><button class="strategy-item"><i class="fas fa-wave-square"></i> RSI Overbought/Oversold</button></li>
+                            <li><button class="strategy-item"><i class="fas fa-compress-arrows-alt"></i> Bollinger Band Squeeze</button></li>
+                        </ul>
+                    </div>
+                    <div class="strategy-editor">
+                        <h3>Custom Strategy Editor</h3>
+                        <div class="editor-toolbar">
+                            <button id="new-strategy-btn" class="btn btn-sm btn-outline-success"><i class="fas fa-plus"></i> New</button>
+                            <button id="save-strategy-btn" class="btn btn-sm btn-outline-primary"><i class="fas fa-save"></i> Save</button>
+                            <button id="backtest-btn" class="btn btn-sm btn-outline-info"><i class="fas fa-history"></i> Backtest</button>
+                        </div>
+                        <textarea placeholder="Define your strategy using natural language or code... e.g., BUY AAPL when 50-day MA crosses above 200-day MA"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Backtesting Engine & Paper Trading -->
+            <div class="dashboard-section" id="backtesting-paper-trading-section">
+                <div class="paper-trading-layout">
+                    <div>
+                        <h2>Paper Trading</h2>
+                        <div class="paper-trade-form">
+                            <div class="form-group">
+                                <label for="paper-symbol">Symbol</label>
+                                <input type="text" id="paper-symbol" class="form-control" value="AAPL">
+                            </div>
+                            <div class="form-group">
+                                <label for="paper-quantity">Quantity</label>
+                                <input type="number" id="paper-quantity" class="form-control" value="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="paper-stop-loss">Stop Loss ($)</label>
+                                <input type="number" id="paper-stop-loss" class="form-control" placeholder="e.g., 195.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="paper-take-profit">Take Profit ($)</label>
+                                <input type="number" id="paper-take-profit" class="form-control" placeholder="e.g., 210.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="paper-position-sizing">Position Sizing (%)</label>
+                                <input type="number" id="paper-position-sizing" class="form-control" placeholder="e.g., 2" value="2">
+                            </div>
+                            <div class="btn-group">
+                                <button id="paper-buy-btn" class="btn btn-success">Buy</button>
+                                <button id="paper-sell-btn" class="btn btn-danger">Sell</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Paper Portfolio (<span id="paper-total-value">$100,000.00</span>)</h4>
+                        <p>Cash: <span id="paper-cash-balance">$100,000.00</span></p>
+                        <div id="paper-positions"></div>
+                    </div>
+                </div>
+                <hr style="margin: 20px 0;">
+                <div id="backtesting-engine-section">
+                    <h2>Backtesting Engine</h2>
+                    <div id="backtest-results-container">
+                        <div id="backtest-results-grid" class="backtest-results-grid"></div>
+                    </div>
+                </div>
+
+                <hr style="margin: 20px 0;">
+
+                <div id="performance-analytics-section">
+                    <h2>Performance Analytics</h2>
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Total P&L</h4>
+                            <p id="analytics-total-pnl">$0.00</p>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Win Rate</h4>
+                            <p id="analytics-win-rate">0%</p>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Sharpe Ratio</h4>
+                            <p id="analytics-sharpe-ratio">0.00</p>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Max Drawdown</h4>
+                            <p id="analytics-max-drawdown">0%</p>
+                        </div>
+                    </div>
+                    <!-- Placeholder for charts -->
+                    <div style="margin-top: 20px; background-color: var(--primary-bg); height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                        <p>Placeholder for Performance Charts</p>
+                    </div>
+                </div>
+                <!-- Placeholder for backtesting and paper trading components -->
+            </div>
+        </div>
+
+        <!-- AI Assistant Panel -->
+        <div class="ai-sidebar">
+            <h2>AI Assistant</h2>
+            <div class="ai-chat-window">
+                <p>Hello! How can I assist you with your finance today?</p>
+            </div>
+            <input type="text" class="ai-chat-input" placeholder="Ask FinanceAI anything...">
+        </div>
+    </div>
+
+    <!-- Broker Connection Modal -->
+    <div id="broker-connect-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close-button">&times;</span>
+                <h2 id="modal-title">Connect to Broker</h2>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: PAN + Mobile -->
+                <div id="step-1" class="step active">
+                    <div class="form-group">
+                        <label for="pan-number">PAN Card Number</label>
+                        <input type="text" id="pan-number" placeholder="Enter your PAN">
+                    </div>
+                    <div class="form-group">
+                        <label for="mobile-number">Registered Mobile Number</label>
+                        <input type="text" id="mobile-number" placeholder="Enter your mobile number">
+                    </div>
+                    <button id="send-otp-btn" class="btn btn-primary w-100">Send OTP</button>
+                </div>
+                <!-- Step 2: OTP -->
+                <div id="step-2" class="step">
+                    <p>Enter the OTP sent to your mobile number.</p>
+                    <div class="form-group">
+                        <label for="otp-code">OTP</label>
+                        <input type="text" id="otp-code" placeholder="Enter OTP">
+                    </div>
+                    <button id="verify-otp-btn" class="btn btn-primary w-100">Verify & Connect</button>
+                </div>
+                 <!-- Step 3: Status -->
+                <div id="step-3" class="step">
+                    <p id="connection-status-message">Connecting...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/shared.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/finance.js" defer></script>
+</body>
+</html>

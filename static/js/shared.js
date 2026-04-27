@@ -137,7 +137,6 @@ window.showToast = showToast;
 async function initShared() {
     // Dark theme is always on — no toggling needed
     document.documentElement.setAttribute('data-theme', 'dark');
-
     highlightActiveNav();
     setLanguage(currentLang);
 

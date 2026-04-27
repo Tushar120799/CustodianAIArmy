@@ -1,10 +1,12 @@
 """
 API Routes for Custodian AI Army
 """
-
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
+import json
+import asyncio
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 import subprocess
+import random
 import json
 import os
 import sqlite3
@@ -16,10 +18,11 @@ from datetime import datetime
 from src.agents.agent_manager import AgentManager
 from src.core.database import (
     get_chats_for_user, save_chat_session, DB_PATH,
-    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key, get_user_github_token, save_custom_agent_config, get_custom_agent_config,
+    get_user_api_keys, get_user_api_keys_raw, save_user_api_keys, delete_user_api_key, get_user_github_token, save_custom_agent_config, get_custom_agent_config, save_user_strategy, get_user_strategies,
     get_user_plan, check_and_increment_rate_limit, upgrade_user_plan
 )
-from src.agents.base_agent import AgentMessage
+from src.agents.astro_agent import AstroAgent # Import AstroAgent
+from src.agents.base_agent import AgentMessage, AgentCapability
 from src.core.logging_config import get_logger
 from src.api.auth import get_current_user_from_cookies, User
 from src.api.build import get_mvp_builder, MVPBuilder
@@ -108,6 +111,35 @@ class CustomAgentConfigRequest(BaseModel):
     name: str
     description: str
     skills: List[str]
+
+# Pydantic models for Finance API
+class BrokerConnectInitiateRequest(BaseModel):
+    broker: str
+    pan_number: str
+    mobile_number: str
+
+class BrokerConnectVerifyRequest(BaseModel):
+    broker: str
+    session_id: str # A temporary ID from the initiate step
+    otp: str
+
+class BacktestRequest(BaseModel):
+    strategy: str
+    symbol: str = "AAPL"
+    start_date: str = "2023-01-01"
+    end_date: str = "2024-01-01"
+
+class PaperTradeRequest(BaseModel):
+    symbol: str
+    quantity: float
+    action: str  # 'BUY' or 'SELL'
+
+class StrategyRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+    content: str
+
 # Pydantic models for API requests/responses
 class TaskRequest(BaseModel):
     description: str
@@ -1408,4 +1440,371 @@ async def mvp_publish_to_github(
         raise
     except Exception as e:
         logger.error(f"Error publishing to GitHub: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WebSocket Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+# In-memory store for a more realistic market simulation
+simulated_market = {
+    "AAPL":  {"price": round(random.uniform(180, 220), 2)},
+    "GOOGL": {"price": round(random.uniform(160, 190), 2)},
+    "MSFT": {"price": round(random.uniform(430, 470), 2)},
+    "AMZN": {"price": round(random.uniform(170, 200), 2)},
+    "TSLA": {"price": round(random.uniform(160, 200), 2)},
+    "NVDA": {"price": round(random.uniform(110, 140), 2)},
+}
+
+@router.websocket("/ws/market-data")
+async def websocket_market_data(websocket: WebSocket):
+    """
+    WebSocket endpoint for live market data.
+    Simulates real-time stock price updates for multiple stocks.
+    """
+    await websocket.accept()
+    logger.info("WebSocket connection accepted for market data.")
+    try:
+        while True:
+            # Pick a random stock to update
+            symbol_to_update = random.choice(list(simulated_market.keys()))
+            
+            # Simulate a price change
+            change_percent = random.uniform(-0.015, 0.015)  # +/- 1.5%
+            old_price = simulated_market[symbol_to_update]['price']
+            new_price = round(old_price * (1 + change_percent), 2)
+            simulated_market[symbol_to_update]['price'] = new_price
+
+            stock_data = {
+                "symbol": symbol_to_update,
+                "price": new_price,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            await websocket.send_json(stock_data)
+            await asyncio.sleep(random.uniform(0.5, 2.5)) # Send updates at random intervals
+    except WebSocketDisconnect:
+        logger.info("WebSocket connection disconnected for market data.")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Finance AI Dashboard API Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/finance/connect/initiate")
+async def finance_connect_initiate(
+    request: BrokerConnectInitiateRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Initiate a connection to a brokerage.
+    This would trigger an OTP send via the FinanceAgent and an MCP server.
+    """
+    try:
+        logger.info(f"User {current_user.email} initiating broker connection: {request.broker}")
+        finance_agent = agent_manager.get_agent_by_name("FinanceAI")
+        if not finance_agent:
+            raise HTTPException(status_code=503, detail="FinanceAI agent is not available.")
+
+        # Delegate to agent
+        command = f"initiate_broker_connection broker={request.broker} pan={request.pan_number} mobile={request.mobile_number}"
+        agent_message = AgentMessage(sender_id="api", receiver_id=finance_agent.agent_id, content=command)
+        response = await agent_manager.send_message(agent_message)
+
+        # The agent's MCP tool should return a JSON with success status and session_id
+        response_data = response.metadata
+        if response_data.get("success"):
+            return response_data
+        else:
+            raise HTTPException(status_code=400, detail=response_data.get("message", "Broker connection failed."))
+
+    except Exception as e:
+        logger.error(f"Error initiating broker connection: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/finance/connect/verify")
+async def finance_connect_verify(
+    request: BrokerConnectVerifyRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Verify the OTP and establish a session with the brokerage via the FinanceAgent.
+    """
+    try:
+        logger.info(f"User {current_user.email} verifying OTP for broker: {request.broker}")
+        finance_agent = agent_manager.get_agent_by_name("FinanceAI")
+        if not finance_agent:
+            raise HTTPException(status_code=503, detail="FinanceAI agent is not available.")
+
+        command = f"verify_broker_connection broker={request.broker} otp={request.otp} session_id={request.session_id}"
+        agent_message = AgentMessage(sender_id="api", receiver_id=finance_agent.agent_id, content=command)
+        response = await agent_manager.send_message(agent_message)
+
+        response_data = response.metadata
+        if response_data.get("success"):
+            return response_data
+        else:
+            raise HTTPException(status_code=400, detail=response_data.get("message", "OTP verification failed."))
+
+    except Exception as e:
+        logger.error(f"Error verifying broker connection: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/finance/historical-data/{symbol}")
+async def get_historical_data(
+    symbol: str,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Get historical data for a given symbol by delegating to the FinanceAgent.
+    """
+    try:
+        finance_agent = agent_manager.get_agent_by_name("FinanceAI")
+        if not finance_agent:
+            raise HTTPException(status_code=503, detail="FinanceAI agent is not available.")
+
+        command = f"get_historical_data for={symbol}"
+        agent_message = AgentMessage(sender_id="api", receiver_id=finance_agent.agent_id, content=command)
+        response = await agent_manager.send_message(agent_message)
+
+        response_data = response.metadata
+        if response_data.get("success"):
+            return response_data
+        else:
+            raise HTTPException(status_code=404, detail=response_data.get("message", "Data not found."))
+    except Exception as e:
+        logger.error(f"Error getting historical data for {symbol}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/finance/backtest")
+async def finance_backtest(
+    request: BacktestRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Run a backtest for a given strategy.
+    This is a simulation and does not involve real trading.
+    """
+    try:
+        logger.info(f"User {current_user.email} delegating backtest to FinanceAgent...")
+        
+        finance_agent = agent_manager.get_agent_by_name("FinanceAI")
+        if not finance_agent:
+            raise HTTPException(status_code=503, detail="FinanceAI agent is not available.")
+
+        # Create a message for the agent
+        agent_message = AgentMessage(
+            sender_id=current_user.email,
+            receiver_id=finance_agent.agent_id,
+            content=f"backtest '{request.strategy}' on {request.symbol} from {request.start_date} to {request.end_date}"
+        )
+
+        # Get the agent's response
+        agent_response = await agent_manager.send_message(agent_message)
+        
+        # The agent should return results in its metadata
+        results = agent_response.metadata.get("result", {})
+
+        return {"success": True, "message": agent_response.content, "results": results}
+
+    except Exception as e:
+        logger.error(f"Error running backtest: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/finance/paper-trade/execute")
+async def finance_paper_trade_execute(
+    request: PaperTradeRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Execute a paper trade. This is a simulation.
+    """
+    try:
+        logger.info(f"User {current_user.email} executing paper trade: {request.action} {request.quantity} {request.symbol}")
+        
+        # Use database for portfolio persistence
+        from src.core.database import get_user_paper_portfolio, save_user_paper_portfolio
+        paper_portfolio = get_user_paper_portfolio(current_user.email)
+
+        # Simulate getting a live price (consistent with market data WS)
+        current_price = round(200 + (random.random() * 10 - 5), 2)
+        trade_value = request.quantity * current_price
+        symbol = request.symbol.upper()
+
+        if request.action.upper() == 'BUY':
+            if paper_portfolio["cash"] < trade_value:
+                raise HTTPException(status_code=400, detail="Not enough virtual cash.")
+            
+            paper_portfolio["cash"] -= trade_value
+            position = paper_portfolio["positions"].get(symbol, {"quantity": 0, "avg_price": 0})
+            new_quantity = position["quantity"] + request.quantity
+            new_avg_price = ((position["quantity"] * position["avg_price"]) + trade_value) / new_quantity
+            paper_portfolio["positions"][symbol] = {"quantity": new_quantity, "avg_price": new_avg_price}
+            message = f"Bought {request.quantity} {symbol} @ ${current_price:.2f}"
+
+        elif request.action.upper() == 'SELL':
+            position = paper_portfolio["positions"].get(symbol)
+            if not position or position["quantity"] < request.quantity:
+                raise HTTPException(status_code=400, detail="Not enough shares to sell.")
+
+            paper_portfolio["cash"] += trade_value
+            position["quantity"] -= request.quantity
+            if position["quantity"] == 0:
+                del paper_portfolio["positions"][symbol]
+            message = f"Sold {request.quantity} {symbol} @ ${current_price:.2f}"
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action. Must be 'BUY' or 'SELL'.")
+
+        # Save updated portfolio back to the database
+        save_user_paper_portfolio(current_user.email, paper_portfolio)
+
+        return {"success": True, "message": message, "portfolio": paper_portfolio}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing paper trade: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/finance/paper-trade/portfolio")
+async def finance_get_paper_portfolio(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Get the current paper trading portfolio.
+    """
+    try:
+        from src.core.database import get_user_paper_portfolio
+        paper_portfolio = get_user_paper_portfolio(current_user.email)
+
+        # Add simulated current prices and P&L to the response for viewing
+        portfolio_view = json.loads(json.dumps(paper_portfolio)) # Deep copy
+        total_value = portfolio_view["cash"]
+        for symbol, data in portfolio_view["positions"].items():
+            current_price = round(200 + (random.random() * 10 - 5), 2)
+            market_value = data["quantity"] * current_price
+            data["current_price"] = current_price
+            data["market_value"] = market_value
+            data["pnl"] = (current_price - data["avg_price"]) * data["quantity"]
+            total_value += market_value
+        
+        portfolio_view["total_value"] = total_value
+        return {"success": True, "portfolio": portfolio_view}
+    except Exception as e:
+        logger.error(f"Error getting paper portfolio: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/finance/portfolio/analytics")
+async def get_portfolio_analytics(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Get high-level analytics for the user's paper portfolio.
+    """
+    try:
+        from src.core.database import get_user_paper_portfolio
+        portfolio = get_user_paper_portfolio(current_user.email)
+
+        # Calculate market values and total portfolio value
+        total_value = portfolio["cash"]
+        positions_with_mv = []
+        for symbol, data in portfolio["positions"].items():
+            # In a real app, you'd fetch live prices. Here we simulate.
+            current_price = round(200 + (random.random() * 10 - 5), 2)
+            market_value = data["quantity"] * current_price
+            total_value += market_value
+            positions_with_mv.append({"symbol": symbol, "market_value": market_value})
+
+        # Calculate asset allocation
+        allocation = []
+        if total_value > 0:
+            # Add cash to allocation
+            allocation.append({"asset": "Cash", "value": portfolio["cash"], "percentage": (portfolio["cash"] / total_value) * 100})
+            # Add positions to allocation
+            for pos in positions_with_mv:
+                allocation.append({"asset": pos["symbol"], "value": pos["market_value"], "percentage": (pos["market_value"] / total_value) * 100})
+
+        # Simulate historical performance data
+        # TODO: This should be calculated based on historical trade data
+        historical_performance = [{"time": (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d'), "value": 100000 * (1 + random.uniform(-0.05, 0.15) * (i/30))} for i in range(30, 0, -1)]
+
+        return {
+            "success": True,
+            "analytics": {
+                "allocation": allocation,
+                "historical_performance": historical_performance,
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting portfolio analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/finance/strategies")
+async def get_strategies(
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Get all trading strategies for the current user, including pre-built ones.
+    """
+    try:
+        strategies = get_user_strategies(current_user.email)
+        return {"success": True, "strategies": strategies}
+    except Exception as e:
+        logger.error(f"Error getting strategies: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/finance/strategies")
+async def save_strategy(
+    request: StrategyRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """
+    Save or update a user-defined trading strategy.
+    """
+    try:
+        strategy_data = {
+            "id": request.id,
+            "name": request.name,
+            "description": request.description,
+            "content": request.content
+        }
+        strategy_id = save_user_strategy(current_user.email, strategy_data)
+        return {
+            "success": True,
+            "message": f"Strategy '{request.name}' saved successfully.",
+            "strategy_id": strategy_id
+        }
+    except Exception as e:
+        logger.error(f"Error saving strategy: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Webhook Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/webhooks/{webhook_id}")
+async def receive_webhook(webhook_id: str, request: Request):
+    """
+    Generic webhook endpoint to receive data from external services.
+    Agents can register for specific webhook_ids.
+    """
+    try:
+        payload = await request.json()
+        logger.info(f"Received webhook for ID '{webhook_id}': {json.dumps(payload)}")
+
+        # In a real system, the agent manager would route this to the appropriate agent(s)
+        # Example: Notify AstroBot or FinanceAI if they are subscribed to this webhook_id
+        # astro_agent = agent_manager.get_agent_by_name("AstroBot")
+        # if astro_agent:
+        #     await astro_agent.handle_message(AgentMessage(sender_id="webhook_system", receiver_id=astro_agent.agent_id, content=f"Webhook '{webhook_id}' received: {payload}"))
+
+        return {"status": "success", "message": f"Webhook '{webhook_id}' received."}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
+    except Exception as e:
+        logger.error(f"Error receiving webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

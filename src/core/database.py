@@ -118,6 +118,28 @@ def init_db():
             )
         ''')
 
+        # User Strategies table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_strategies (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                content TEXT NOT NULL,
+                is_prebuilt INTEGER DEFAULT 0,
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
+        # Paper Trading Portfolios table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS paper_portfolios (
+                user_email TEXT PRIMARY KEY,
+                portfolio_data TEXT NOT NULL,
+                last_updated TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print(f"Database initialized at {DB_PATH}")
@@ -605,6 +627,107 @@ def get_user_github_repo_permissions(user_email: str) -> List[Dict[str, Any]]:
         {"repo_name": row[0], "permission_granted": bool(row[1]), "last_updated": row[2]}
         for row in rows
     ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FINANCE DASHBOARD FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_user_paper_portfolio(user_email: str) -> Dict[str, Any]:
+    """
+    Retrieves a user's paper trading portfolio from the database.
+    If no portfolio exists, creates and returns a default one.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT portfolio_data FROM paper_portfolios WHERE user_email = ?", (user_email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        return json.loads(row[0])
+    else:
+        # Return a default portfolio structure for new users
+        return {
+            "cash": 100000.00,
+            "positions": {}
+        }
+
+def save_user_paper_portfolio(user_email: str, portfolio_data: Dict[str, Any]):
+    """
+    Saves a user's paper trading portfolio to the database.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    portfolio_json = json.dumps(portfolio_data)
+
+    cursor.execute('''
+        INSERT INTO paper_portfolios (user_email, portfolio_data, last_updated)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_email) DO UPDATE SET
+            portfolio_data=excluded.portfolio_data,
+            last_updated=excluded.last_updated
+    ''', (user_email, portfolio_json, now))
+
+    conn.commit()
+    conn.close()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STRATEGY STUDIO FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save_user_strategy(user_email: str, strategy_data: Dict[str, Any]) -> str:
+    """
+    Saves or updates a user's trading strategy in the database.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    strategy_id = strategy_data.get("id") or str(uuid.uuid4())
+
+    cursor.execute('''
+        INSERT INTO user_strategies (id, user_email, name, description, content, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name=excluded.name,
+            description=excluded.description,
+            content=excluded.content,
+            last_updated=excluded.last_updated
+    ''', (
+        strategy_id,
+        user_email,
+        strategy_data.get("name", "Untitled Strategy"),
+        strategy_data.get("description", ""),
+        strategy_data.get("content", ""),
+        now
+    ))
+
+    conn.commit()
+    conn.close()
+    return strategy_id
+
+def get_user_strategies(user_email: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves all strategies for a given user from the database.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, name, description, content, is_prebuilt, last_updated FROM user_strategies WHERE user_email = ? OR is_prebuilt = 1 ORDER BY name",
+        (user_email,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [{
+        "id": row[0],
+        "name": row[1],
+        "description": row[2],
+        "content": row[3],
+        "is_prebuilt": bool(row[4]),
+        "last_updated": row[5]
+    } for row in rows]
 
 
 # Initialize the database when this module is loaded

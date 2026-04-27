@@ -3,6 +3,7 @@
     "jest-environment-jsdom": "^30.3.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/server-everything": "^2026.1.26",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0"
   }
